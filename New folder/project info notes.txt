@@ -1,0 +1,71 @@
+The base paper notes that most of the encephalogram recordings in this dataset were contaminated by noise from the power line at 60 Hz. So, our first cleaning step is to apply a "Notch filter" to cut out exactly 60 Hz. Then, we apply a "Bandpass filter" to keep only the frequencies where actual brain activity happens (typically between 0.5 Hz and 50 Hz).
+
+After that, we'll apply the Continuous Wavelet Transform (CWT).  This will take our 1D line and stretch it out into a 2D heatmap (scalogram) showing how the intensity of different brainwave frequencies changes over time.
+
+
+in loading data:
+
+While Pandas is the "gold standard" for tabular data (like Excel sheets or CSVs), it isn't used here for a few specific reasons:
+
+Binary Format: The data is stored in an EDF (European Data Format) file. This is a complex binary format, not a text-based table. mne is a specialized library designed to read these files while keeping the metadata (like channel names and sampling rates) intact. 
+
+Memory Efficiency: EEG data can be massive (thousands of samples per second). mne handles this efficiently by allowing us to "lazy load" data, whereas Pandas would try to load every single number into a table, which could crash your memory.
+
+Signal Processing Tools: mne comes with built-in tools for filtering and artifacts removal that Pandas lacks.
+
+
+
+CWT
+
+Cleaned the Signal: Raw EEG data is notoriously noisy. By applying those filters, we specifically knocked out the 60 Hz electrical interference from the hospital equipment and isolated the 0.5 to 50 Hz band where actual brain waves (Alpha, Beta, Theta, Delta) happen.
+
+Changed the Problem Type: You took a 1D time-series problem (a line going up and down) and, using CWT, exploded it into a 2D spatial problem (a heatmap). You essentially translated the brain's electrical pulses into a "picture."
+
+Prepared for the CNN: Because we now have an image (that 50 x 512 matrix of power intensities), we can use a 2D Convolutional Neural Network. CNNs are incredibly powerful at finding visual patterns in images, like the specific "blobs" of intense frequency that might indicate a seizure is starting.
+
+
+
+Let's do a quick recap to solidify what we've built, gently correct one tiny detail about the frequencies, and then answer exactly why we bundled it all together into that final model.py script.
+
+1. The Journey So Far (Your Recap, Refined)
+Here is exactly what we've accomplished, step-by-step:
+
+The Raw Data: We loaded the chb01_03.edf file from the CHB-MIT dataset, which contains raw, electrical brain activity.
+
+Preprocessing (The Cleanup): You were super close on the frequencies! Instead of keeping 0-60 Hz, we actually targeted 60 Hz to completely delete it, because hospital power lines run at 60 Hz and contaminate the recordings with hum. Then, we kept only the 0.5 Hz to 50 Hz range, because that is where the actual human brainwaves (Alpha, Beta, Theta, Delta) live.
+
+CWT (The Translator): We used the Continuous Wavelet Transform to convert that 1D squiggly line into a 2D color heatmap (a scalogram).
+
+The 2D CNN (The Eye): We passed that image into a Convolutional Neural Network. The CNN acted like a visual scanner, looking for specific "shapes" or "blobs" of color in the heatmap that might indicate a seizure.
+
+The Transformer (The Brain/Memory): We flattened the CNN's visual findings into a timeline and gave it to the Transformer. The Transformer used "Self-Attention" to look at the whole 2-second clip and ask, "Does what happened at 0.5 seconds connect to what is happening at 1.8 seconds?" This gives the model long-term memory.
+
+2. Why did we write a separate model to combine it all?
+This is a fantastic question. In the earlier steps, we were writing "scratchpad" code. We were testing the CWT to see if it looked right, and then we built a tiny dummy CNN just to see if the tensor shapes fit together.
+
+Think of it like building a car:
+
+Steps 1-3: We were building the engine parts on a workbench and testing them individually to make sure they sparked.
+
+Step 4 (model.py): We bolted the engine, transmission, and wheels into a single chassis.
+
+In PyTorch, to actually train an AI, every mathematical step must be contained inside a single nn.Module class. When you pass data into that combined model, PyTorch secretly builds a "computation graph." It tracks every single multiplication and addition. Later, when we tell the model it made a wrong guess, PyTorch uses that graph to trace its steps backward (Backpropagation) and fix its own math. If the CNN and the Transformer were in separate scripts, PyTorch couldn't connect the dots to learn!
+
+3. What's Next? (Softmax & The Data Factory)
+You are 100% correct about the next steps.
+
+The Softmax: Our combined model outputs raw numbers (called "logits"). If you look closely at the model.py test script, we already added torch.softmax(predictions, dim=1) right after the model output. This takes those raw numbers and squashes them into clean, readable percentages that add up to 100% (e.g., 85% During Seizure, 10% Before, 5% After).
+
+Training for Accuracy: Right now, your model is fully built, but its "brain" is full of random numbers. It doesn't know what a seizure looks like yet.
+
+To train it, we need to build the Data Pipeline. We will write code that:
+
+Chops the 1-hour EEG file into hundreds of 2-second blocks.
+
+Automatically labels each block (0 = Before, 1 = During, 2 = After) using the timestamps we found.
+
+Feeds them to the model in batches.
+
+Calculates the Error (Loss) and updates the model's weights to get smarter.
+
+Are you ready to build the Data Pipeline script so we can start generating our training dataset?

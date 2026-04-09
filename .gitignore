@@ -1,0 +1,31 @@
+# Python Virtual Environment
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Data sets and archives
+dataset/
+dataset parts/
+dataset zips/
+extracted/
+skilling files/
+*.zip
+*.edf
+*.csv
+*.txt
+!requirements.txt
+!New folder/project info notes.txt
+!dataset/**/chb01-summary.txt
+
+# Do NOT ignore backend_model_completed.pt or backend_model_completed.pt! The API needs them to run online.
+
+# User generated files
+*.pdf
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
