@@ -1,0 +1,2371 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroScan — EEG Epilepsy Detection</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #050a0e;
+            --bg2: #0b1419;
+            --bg3: #111d24;
+            --card: #0f1c24;
+            --border: rgba(0, 200, 180, 0.12);
+            --border2: rgba(0, 200, 180, 0.22);
+            --accent: #00c8b4;
+            --accent2: #00e8d0;
+            --normal: #22c55e;
+            --preictal: #f59e0b;
+            --seizure: #ef4444;
+            --postictal: #8b5cf6;
+            --text: #e2edf2;
+            --muted: #6b8a96;
+            --mono: 'Space Mono', monospace;
+            --sans: 'DM Sans', sans-serif;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 15px;
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0, 200, 180, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 200, 180, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ═══════════════════════════════════════
+   LOGIN PAGE
+═══════════════════════════════════════ */
+        #loginPage {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            animation: fadeIn .4s ease;
+        }
+
+        #loginPage.hiding {
+            animation: pageOut .5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0
+            }
+
+            to {
+                opacity: 1
+            }
+        }
+
+        @keyframes pageOut {
+            from {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(1.04)
+            }
+        }
+
+        /* animated scan lines behind login */
+        #loginPage::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 200, 180, 0.015) 2px,
+                    rgba(0, 200, 180, 0.015) 4px);
+            pointer-events: none;
+        }
+
+        /* brain-wave SVG decoration */
+        .login-wave-bg {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .login-wave-bg svg {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            opacity: .07;
+        }
+
+        .login-wrap {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 1fr 420px 1fr;
+            grid-template-rows: 1fr;
+            width: 100%;
+            height: 100vh;
+            align-items: center;
+        }
+
+        /* left decorative panel */
+        .login-deco {
+            grid-column: 1;
+            padding: 60px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            opacity: 0;
+            animation: slideRight .7s .2s ease forwards;
+        }
+
+        @keyframes slideRight {
+            from {
+                opacity: 0;
+                transform: translateX(-30px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0)
+            }
+        }
+
+        .deco-tagline {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--accent);
+            letter-spacing: .2em;
+            margin-bottom: 24px;
+        }
+
+        .deco-heading {
+            font-size: 38px;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--text);
+            margin-bottom: 20px;
+        }
+
+        .deco-heading span {
+            color: var(--accent);
+        }
+
+        .deco-desc {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.8;
+            max-width: 360px;
+            margin-bottom: 40px;
+        }
+
+        .deco-stats {
+            display: flex;
+            gap: 32px;
+        }
+
+        .dstat-val {
+            font-family: var(--mono);
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .dstat-lbl {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px;
+            letter-spacing: .05em;
+        }
+
+        /* EEG mini-waveform decoration */
+        .deco-eeg {
+            margin-top: 48px;
+            position: relative;
+        }
+
+        .deco-eeg canvas {
+            width: 100%;
+            height: 60px;
+            display: block;
+            opacity: .5;
+        }
+
+        .deco-eeg-label {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: .12em;
+            margin-top: 6px;
+        }
+
+        /* center divider */
+        .login-divider {
+            grid-column: 1 / span 3;
+            position: absolute;
+            left: calc(100% / 3);
+            top: 10%;
+            bottom: 10%;
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, var(--border2), transparent);
+            pointer-events: none;
+        }
+
+        /* login card */
+        .login-card {
+            grid-column: 2;
+            background: var(--card);
+            border: 1px solid var(--border2);
+            border-radius: 16px;
+            padding: 44px 40px;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            animation: slideUp .6s .1s ease forwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(24px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: .6;
+        }
+
+        .login-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(to top, rgba(0, 200, 180, .04), transparent);
+            pointer-events: none;
+        }
+
+        .login-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--mono);
+            font-size: 18px;
+            color: var(--accent);
+            margin-bottom: 6px;
+        }
+
+        .login-logo-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: .5;
+                transform: scale(.75)
+            }
+        }
+
+        .login-subtitle {
+            font-size: 12px;
+            color: var(--muted);
+            font-family: var(--mono);
+            letter-spacing: .08em;
+            margin-bottom: 36px;
+        }
+
+        /* tabs */
+        .auth-tabs {
+            display: flex;
+            gap: 0;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3px;
+            margin-bottom: 28px;
+            background: rgba(0, 0, 0, .2);
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all .2s;
+            letter-spacing: .06em;
+        }
+
+        .auth-tab.active {
+            background: rgba(0, 200, 180, .12);
+            color: var(--accent);
+            border: 1px solid var(--border2);
+        }
+
+        /* forms */
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .field label {
+            display: block;
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            margin-bottom: 7px;
+        }
+
+        .field input {
+            width: 100%;
+            background: rgba(0, 0, 0, .3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 14px;
+            transition: border-color .2s, box-shadow .2s;
+            outline: none;
+        }
+
+        .field input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 200, 180, .1);
+        }
+
+        .field input::placeholder {
+            color: var(--muted);
+        }
+
+        .field input.error {
+            border-color: var(--seizure);
+        }
+
+        .field-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .field-row .field {
+            flex: 1;
+        }
+
+        .field-hint {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 5px;
+        }
+
+        .field-hint.err {
+            color: var(--seizure);
+            display: none;
+        }
+
+        .field-hint.err.show {
+            display: block;
+        }
+
+        /* password strength */
+        .pw-strength {
+            display: flex;
+            gap: 4px;
+            margin-top: 7px;
+        }
+
+        .pw-bar {
+            flex: 1;
+            height: 3px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, .08);
+            transition: background .3s;
+        }
+
+        .pw-bar.s1 {
+            background: var(--seizure);
+        }
+
+        .pw-bar.s2 {
+            background: var(--preictal);
+        }
+
+        .pw-bar.s3 {
+            background: var(--accent);
+        }
+
+        .pw-bar.s4 {
+            background: var(--normal);
+        }
+
+        /* remember / forgot row */
+        .form-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 22px;
+        }
+
+        .remember {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 13px;
+            color: var(--muted);
+            cursor: pointer;
+        }
+
+        .remember input[type=checkbox] {
+            width: 15px;
+            height: 15px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .forgot {
+            font-size: 12px;
+            color: var(--accent);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: var(--mono);
+            letter-spacing: .04em;
+            text-decoration: none;
+        }
+
+        .forgot:hover {
+            text-decoration: underline;
+        }
+
+        /* submit button */
+        .submit-btn {
+            width: 100%;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            padding: 13px;
+            color: #000;
+            font-family: var(--mono);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            cursor: pointer;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, .1), transparent);
+            opacity: 0;
+            transition: opacity .2s;
+        }
+
+        .submit-btn:hover::before {
+            opacity: 1;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(0, 200, 180, .3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .btn-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(0, 0, 0, .3);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            display: none;
+        }
+
+        .submit-btn.loading .btn-spinner {
+            display: block;
+        }
+
+        .submit-btn.loading .btn-txt {
+            opacity: .7;
+        }
+
+        /* divider */
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 22px 0;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* demo login */
+        .demo-login-btn {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 11px;
+            color: var(--muted);
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: .08em;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .demo-login-btn:hover {
+            border-color: var(--border2);
+            color: var(--text);
+            background: rgba(0, 200, 180, .04);
+        }
+
+        /* toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            background: var(--card);
+            border: 1px solid var(--border2);
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .3s, transform .3s;
+            transform: translateX(-50%) translateY(10px);
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ═══════════════════════════════════════
+   MAIN APP  (hidden until logged in)
+═══════════════════════════════════════ */
+        #appPage {
+            display: none;
+            animation: fadeIn .5s ease;
+        }
+
+        #appPage.visible {
+            display: block;
+        }
+
+        /* ── HEADER ── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(5, 10, 14, 0.92);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-family: var(--mono);
+            font-size: 16px;
+            color: var(--accent);
+            letter-spacing: .05em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .header-info {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: .08em;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 200, 180, .08);
+            border: 1px solid var(--border2);
+            border-radius: 20px;
+            padding: 5px 14px 5px 8px;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--accent);
+        }
+
+        .user-avatar {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(0, 200, 180, .2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .logout-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 12px;
+            color: var(--muted);
+            font-family: var(--mono);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all .2s;
+            letter-spacing: .06em;
+        }
+
+        .logout-btn:hover {
+            border-color: var(--seizure);
+            color: var(--seizure);
+            background: rgba(239, 68, 68, .06);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--accent);
+            border: 1px solid var(--border2);
+            border-radius: 20px;
+            padding: 4px 12px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: pulse 1.5s infinite;
+        }
+
+        /* ── MAIN LAYOUT ── */
+        main {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 24px;
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 20px;
+        }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color .3s;
+        }
+
+        .card:hover {
+            border-color: var(--border2);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: .4;
+        }
+
+        .card-label {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .15em;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-label::before {
+            content: '';
+            width: 16px;
+            height: 1px;
+            background: var(--accent);
+            opacity: .6;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        /* ── LEFT PANEL ── */
+        .panel-left {
+            grid-column: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .demo-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .demo-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all .2s;
+            text-align: left;
+        }
+
+        .demo-btn:hover {
+            background: rgba(0, 200, 180, .06);
+            border-color: var(--border2);
+        }
+
+        .demo-btn.active {
+            border-color: var(--accent);
+            background: rgba(0, 200, 180, .08);
+        }
+
+        .demo-btn .btn-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .demo-btn .btn-label {
+            font-weight: 500;
+        }
+
+        .demo-btn .btn-desc {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .btn-normal .btn-dot {
+            background: var(--normal);
+            box-shadow: 0 0 6px var(--normal);
+        }
+
+        .btn-preictal .btn-dot {
+            background: var(--preictal);
+            box-shadow: 0 0 6px var(--preictal);
+        }
+
+        .btn-seizure .btn-dot {
+            background: var(--seizure);
+            box-shadow: 0 0 6px var(--seizure);
+        }
+
+        .upload-zone {
+            border: 1.5px dashed var(--border2);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .2s;
+            margin-top: 12px;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent);
+            background: rgba(0, 200, 180, .04);
+        }
+
+        .upload-zone input {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+            opacity: .6;
+        }
+
+        .upload-text {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .analyze-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent), #0097a7);
+            border: none;
+            border-radius: 8px;
+            padding: 14px;
+            color: #000;
+            font-family: var(--mono);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(0, 200, 180, .3);
+        }
+
+        .analyze-btn:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .analyze-btn.loading::after {
+            content: '';
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(0, 0, 0, .3);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-key {
+            color: var(--muted);
+        }
+
+        .info-val {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--accent);
+        }
+
+        /* ── RIGHT PANEL ── */
+        .panel-right {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #eegCanvas {
+            width: 100%;
+            height: 160px;
+            display: block;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, .3);
+        }
+
+        .waveform-controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            align-items: center;
+        }
+
+        .wc-label {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .wc-val {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--accent);
+        }
+
+        .result-display {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, .2);
+            transition: all .4s;
+        }
+
+        .result-display.result-normal {
+            border-color: rgba(34, 197, 94, .4);
+            background: rgba(34, 197, 94, .06);
+        }
+
+        .result-display.result-preictal {
+            border-color: rgba(245, 158, 11, .4);
+            background: rgba(245, 158, 11, .06);
+        }
+
+        .result-display.result-seizure {
+            border-color: rgba(239, 68, 68, .4);
+            background: rgba(239, 68, 68, .06);
+        }
+
+        .result-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+            border: 2px solid currentColor;
+            transition: all .4s;
+        }
+
+        .result-normal .result-icon {
+            color: var(--normal);
+            background: rgba(34, 197, 94, .1);
+        }
+
+        .result-preictal .result-icon {
+            color: var(--preictal);
+            background: rgba(245, 158, 11, .1);
+        }
+
+        .result-seizure .result-icon {
+            color: var(--seizure);
+            background: rgba(239, 68, 68, .1);
+        }
+
+        .result-label {
+            font-family: var(--mono);
+            font-size: 26px;
+            font-weight: 700;
+            transition: color .4s;
+        }
+
+        .result-normal .result-label {
+            color: var(--normal);
+        }
+
+        .result-preictal .result-label {
+            color: var(--preictal);
+        }
+
+        .result-seizure .result-label {
+            color: var(--seizure);
+        }
+
+        .result-sub {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .confidence-val {
+            font-family: var(--mono);
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text);
+            margin-left: auto;
+        }
+
+        .confidence-label {
+            font-size: 11px;
+            color: var(--muted);
+            font-family: var(--mono);
+            letter-spacing: .1em;
+        }
+
+        .prob-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .prob-name {
+            font-family: var(--mono);
+            font-size: 12px;
+            width: 72px;
+            flex-shrink: 0;
+        }
+
+        .prob-bar-bg {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, .06);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .prob-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width .6s cubic-bezier(.4, 0, .2, 1);
+            width: 0%;
+        }
+
+        .prob-normal .prob-bar-fill {
+            background: var(--normal);
+        }
+
+        .prob-preictal .prob-bar-fill {
+            background: var(--preictal);
+        }
+
+        .prob-seizure .prob-bar-fill {
+            background: var(--seizure);
+        }
+
+        .prob-pct {
+            font-family: var(--mono);
+            font-size: 12px;
+            width: 46px;
+            text-align: right;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .metric-tile {
+            background: rgba(0, 0, 0, .3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .metric-val {
+            font-family: var(--mono);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 4px;
+            letter-spacing: .05em;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table th {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .12em;
+            color: var(--muted);
+            text-transform: uppercase;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .history-table td {
+            padding: 10px 12px;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255, 255, 255, .04);
+        }
+
+        .history-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .badge-normal {
+            background: rgba(34, 197, 94, .15);
+            color: var(--normal);
+        }
+
+        .badge-preictal {
+            background: rgba(245, 158, 11, .15);
+            color: var(--preictal);
+        }
+
+        .badge-seizure {
+            background: rgba(239, 68, 68, .15);
+            color: var(--seizure);
+        }
+
+        .alert-banner {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            border-radius: 8px;
+            border: 1px solid;
+            margin-bottom: 8px;
+            font-size: 14px;
+            animation: slideIn .3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-8px);
+                opacity: 0
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1
+            }
+        }
+
+        .alert-banner.show {
+            display: flex;
+        }
+
+        .alert-seizure {
+            border-color: rgba(239, 68, 68, .5);
+            background: rgba(239, 68, 68, .1);
+            color: #fca5a5;
+        }
+
+        .alert-normal {
+            border-color: rgba(34, 197, 94, .4);
+            background: rgba(34, 197, 94, .08);
+            color: #86efac;
+        }
+
+        .alert-icon {
+            font-size: 18px;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 48px 24px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 40px;
+            opacity: .4;
+        }
+
+        .empty-text {
+            font-size: 13px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border2);
+            border-radius: 3px;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+
+            .panel-left {
+                grid-column: 1;
+            }
+
+            .login-wrap {
+                grid-template-columns: 1fr;
+            }
+
+            .login-deco {
+                display: none;
+            }
+
+            .login-divider {
+                display: none;
+            }
+
+            .login-card {
+                grid-column: 1;
+                margin: 20px;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+    <!-- ═══════════════════════════════════════════
+     LOGIN PAGE
+═══════════════════════════════════════════ -->
+    <div id="loginPage">
+
+        <!-- animated EEG wave background -->
+        <div class="login-wave-bg">
+            <svg viewBox="0 0 1440 200" preserveAspectRatio="none">
+                <path id="bgWave" d="" fill="none" stroke="#00c8b4" stroke-width="2" />
+            </svg>
+        </div>
+
+        <div class="login-wrap">
+
+            <!-- Left decorative panel -->
+            <div class="login-deco">
+                <div class="deco-tagline">NEURAL DIAGNOSTICS PLATFORM</div>
+                <h1 class="deco-heading">
+                    Detect seizures<br>with <span>AI precision</span>
+                </h1>
+                <p class="deco-desc">
+                    NeuroScan uses a 1D Double CNN to classify EEG signals into Normal, Preictal, and Seizure states —
+                    based on
+                    the Abiyev et al. 2020 architecture.
+                </p>
+                <div class="deco-stats">
+                    <div>
+                        <div class="dstat-val">98.67%</div>
+                        <div class="dstat-lbl">Accuracy</div>
+                    </div>
+                    <div>
+                        <div class="dstat-val">97.67%</div>
+                        <div class="dstat-lbl">Sensitivity</div>
+                    </div>
+                    <div>
+                        <div class="dstat-val">10-fold</div>
+                        <div class="dstat-lbl">Cross-val</div>
+                    </div>
+                </div>
+                <div class="deco-eeg">
+                    <canvas id="decoCanvas" width="500" height="60"></canvas>
+                    <div class="deco-eeg-label">LIVE EEG SIMULATION</div>
+                </div>
+            </div>
+
+            <!-- vertical divider -->
+            <div class="login-divider"></div>
+
+            <!-- Login / Register Card -->
+            <div class="login-card">
+                <div class="login-logo">
+                    <span class="login-logo-dot"></span>
+                    NeuroScan
+                </div>
+                <div class="login-subtitle">EEG EPILEPSY DETECTION SYSTEM</div>
+
+                <!-- Tabs -->
+                <div class="auth-tabs">
+                    <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+                    <button class="auth-tab" onclick="switchTab('register')">Register</button>
+                </div>
+
+                <!-- LOGIN FORM -->
+                <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="field">
+                        <label>Email Address</label>
+                        <input type="email" id="loginEmail" placeholder="doctor@hospital.com" required>
+                        <div class="field-hint err" id="loginEmailErr">Please enter a valid email.</div>
+                    </div>
+                    <div class="field">
+                        <label>Password</label>
+                        <input type="password" id="loginPass" placeholder="Enter your password" required>
+                        <div class="field-hint err" id="loginPassErr">Incorrect password.</div>
+                    </div>
+                    <div class="form-meta">
+                        <label class="remember">
+                            <input type="checkbox" id="rememberMe"> Remember me
+                        </label>
+                        <button type="button" class="forgot" onclick="showForgot()">Forgot password?</button>
+                    </div>
+                    <button type="submit" class="submit-btn" id="loginBtn">
+                        <span class="btn-spinner"></span>
+                        <span class="btn-txt">SIGN IN</span>
+                    </button>
+                    <div class="or-divider">or</div>
+                    <button type="button" class="demo-login-btn" onclick="demoLogin()">
+                        Continue with demo account
+                    </button>
+                </form>
+
+                <!-- REGISTER FORM -->
+                <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="field-row">
+                        <div class="field">
+                            <label>First Name</label>
+                            <input type="text" id="regFirst" placeholder="Dr. Sara" required>
+                        </div>
+                        <div class="field">
+                            <label>Last Name</label>
+                            <input type="text" id="regLast" placeholder="Patel" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Email Address</label>
+                        <input type="email" id="regEmail" placeholder="doctor@hospital.com" required>
+                        <div class="field-hint err" id="regEmailErr">Email already registered.</div>
+                    </div>
+                    <div class="field">
+                        <label>Role</label>
+                        <input type="text" id="regRole" placeholder="Neurologist / Researcher / Patient">
+                    </div>
+                    <div class="field">
+                        <label>Password</label>
+                        <input type="password" id="regPass" placeholder="Create a strong password" required
+                            oninput="checkStrength(this.value)">
+                        <div class="pw-strength">
+                            <div class="pw-bar" id="pb1"></div>
+                            <div class="pw-bar" id="pb2"></div>
+                            <div class="pw-bar" id="pb3"></div>
+                            <div class="pw-bar" id="pb4"></div>
+                        </div>
+                        <div class="field-hint" id="pwHint" style="color:var(--muted)">Minimum 8 characters</div>
+                    </div>
+                    <div class="field">
+                        <label>Confirm Password</label>
+                        <input type="password" id="regPass2" placeholder="Repeat password" required>
+                        <div class="field-hint err" id="regPassErr">Passwords do not match.</div>
+                    </div>
+                    <button type="submit" class="submit-btn" id="registerBtn">
+                        <span class="btn-spinner"></span>
+                        <span class="btn-txt">CREATE ACCOUNT</span>
+                    </button>
+                </form>
+
+            </div><!-- /login-card -->
+
+        </div><!-- /login-wrap -->
+    </div><!-- /loginPage -->
+
+    <!-- toast notification -->
+    <div class="toast" id="toast">
+        <span class="toast-dot" id="toastDot"></span>
+        <span id="toastMsg"></span>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════
+     APP PAGE
+═══════════════════════════════════════════ -->
+    <div id="appPage">
+
+        <header>
+            <div class="logo">
+                <span class="logo-dot"></span>
+                NeuroScan
+            </div>
+            <div class="header-info">EEG EPILEPSY DETECTION SYSTEM / CNN MODEL</div>
+            <div class="header-right">
+                <div class="user-chip">
+                    <div class="user-avatar" id="userAvatar">D</div>
+                    <span id="userNameDisplay">Demo User</span>
+                </div>
+                <button class="logout-btn" onclick="logout()">LOGOUT</button>
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    ONLINE
+                </div>
+            </div>
+        </header>
+
+        <main>
+
+            <!-- LEFT PANEL -->
+            <div class="panel-left">
+
+                <div class="card">
+                    <div class="card-label">Input Signal</div>
+                    <div class="card-title">Load EEG Data</div>
+                    <p style="font-size:13px;color:var(--muted);margin:8px 0 16px;">Select a demo signal or upload your
+                        own EEG
+                        file (.txt / .csv)</p>
+                    <div class="demo-buttons">
+                        <button class="demo-btn btn-normal" onclick="loadDemo('normal')">
+                            <div>
+                                <div class="btn-label">Normal EEG</div>
+                                <div class="btn-desc">Healthy background activity (Set B)</div>
+                            </div>
+                            <span class="btn-dot"></span>
+                        </button>
+                        <button class="demo-btn btn-preictal" onclick="loadDemo('preictal')">
+                            <div>
+                                <div class="btn-label">Preictal EEG</div>
+                                <div class="btn-desc">Pre-seizure state (Set D)</div>
+                            </div>
+                            <span class="btn-dot"></span>
+                        </button>
+                        <button class="demo-btn btn-seizure" onclick="loadDemo('seizure')">
+                            <div>
+                                <div class="btn-label">Seizure EEG</div>
+                                <div class="btn-desc">Ictal activity (Set E)</div>
+                            </div>
+                            <span class="btn-dot"></span>
+                        </button>
+                    </div>
+                    <label class="upload-zone" for="fileInput" id="uploadZoneLabel">
+                        <input type="file" id="fileInput" accept=".txt,.csv,.edf" onchange="handleFileUpload(event)">
+                        <div class="upload-icon">📂</div>
+                        <div class="upload-text">Drop your EEG file here<br><span style="color:var(--accent)">or click
+                                to
+                                browse</span></div>
+                    </label>
+
+                    <!-- Add the missing loaded state container here -->
+                    <div id="edfLoaded"
+                        style="display:none; padding:16px; border:1px solid var(--border2); border-radius:8px; background:rgba(0, 200, 180, 0.05); align-items:center; gap:12px;">
+                        <div style="font-size:24px;">📄</div>
+                        <div style="flex:1; overflow:hidden;">
+                            <div id="edfName"
+                                style="color:var(--accent); font-family:var(--mono); font-weight:600; font-size:12px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">
+                                —</div>
+                            <div id="edfChannelInfo" style="color:var(--muted); font-size:11px;">—</div>
+                        </div>
+                        <button
+                            style="background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:4px 8px; cursor:pointer;"
+                            onclick="document.getElementById('fileInput').click()">Change</button>
+                    </div>
+                    <button class="analyze-btn" id="analyzeBtn" onclick="analyzeSignal()" disabled>
+                        <span id="analyzeBtnText">RUN ANALYSIS</span>
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-label">Model Info</div>
+                    <div class="info-row"><span class="info-key">Architecture</span><span class="info-val">1D Double
+                            CNN</span>
+                    </div>
+                    <div class="info-row"><span class="info-key">Input size</span><span class="info-val">4096
+                            samples</span></div>
+                    <div class="info-row"><span class="info-key">Classes</span><span class="info-val">3</span></div>
+                    <div class="info-row"><span class="info-key">Conv blocks</span><span class="info-val">4 ×
+                            Double</span></div>
+                    <div class="info-row"><span class="info-key">Optimizer</span><span class="info-val">RMSprop</span>
+                    </div>
+                    <div class="info-row"><span class="info-key">Validation</span><span class="info-val">10-fold
+                            CV</span></div>
+                    <div class="info-row"><span class="info-key">Dataset</span><span class="info-val">BU EEG</span>
+                    </div>
+                    <div class="info-row"><span class="info-key">Paper ACC</span><span class="info-val">98.67 %</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-label">Published Performance</div>
+                    <div class="metrics-grid">
+                        <div class="metric-tile">
+                            <div class="metric-val">98.67%</div>
+                            <div class="metric-label">Accuracy</div>
+                        </div>
+                        <div class="metric-tile">
+                            <div class="metric-val">97.67%</div>
+                            <div class="metric-label">Sensitivity</div>
+                        </div>
+                        <div class="metric-tile">
+                            <div class="metric-val">98.83%</div>
+                            <div class="metric-label">Specificity</div>
+                        </div>
+                    </div>
+                    <p style="font-size:11px;color:var(--muted);margin-top:12px;font-family:var(--mono);">Source: Abiyev
+                        et al.,
+                        Appl. Sci. 2020</p>
+                </div>
+
+            </div>
+
+            <!-- RIGHT PANEL -->
+            <div class="panel-right">
+
+                <div class="alert-banner" id="alertBanner">
+                    <span class="alert-icon" id="alertIcon">⚠️</span>
+                    <span id="alertText"></span>
+                </div>
+
+                <div class="card">
+                    <div class="card-label">EEG Waveform</div>
+                    <canvas id="eegCanvas" width="900" height="160"></canvas>
+                    <div class="waveform-controls">
+                        <span class="wc-label">SAMPLES:</span><span class="wc-val" id="sampleCount">—</span>
+                        <span style="margin:0 8px;color:var(--border2)">|</span>
+                        <span class="wc-label">DURATION:</span><span class="wc-val" id="sigDuration">—</span>
+                        <span style="margin:0 8px;color:var(--border2)">|</span>
+                        <span class="wc-label">AMPLITUDE:</span><span class="wc-val" id="sigAmp">—</span>
+                    </div>
+                </div>
+
+                <div class="card" id="cwtCard" style="display:none; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="card-label">CWT Scalogram</div>
+                        <div id="cwtChInfo" style="font-family:var(--mono); font-size:11px; color:var(--muted)"></div>
+                    </div>
+                    <img id="cwtImage"
+                        style="width:100%; border-radius:6px; margin-top:12px; border:1px solid var(--border);"
+                        alt="CWT Scalogram" />
+                </div>
+
+                <div class="card" id="sessionMetricsCard" style="display:none; margin-bottom:20px;">
+                    <div class="card-label">Session Metrics</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:8px;">
+                        <div>
+                            <div
+                                style="color:var(--muted); font-size:11px; font-family:var(--mono); margin-bottom:4px;">
+                                LOSS (NLL)</div>
+                            <div id="lossVal"
+                                style="color:var(--preictal); font-size:24px; font-weight:700; font-family:var(--mono);">
+                                —</div>
+                            <canvas id="lossChart" style="width:100%; height:48px; margin-top:8px;"></canvas>
+                        </div>
+                        <div>
+                            <div
+                                style="color:var(--muted); font-size:11px; font-family:var(--mono); margin-bottom:4px;">
+                                SENSITIVITY</div>
+                            <div id="sensitivityVal"
+                                style="color:var(--seizure); font-size:24px; font-weight:700; font-family:var(--mono);">
+                                —</div>
+                            <canvas id="sensitivityChart" style="width:100%; height:48px; margin-top:8px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-label">Prediction Result</div>
+                    <div class="result-display" id="resultDisplay">
+                        <div class="empty-state" id="emptyState">
+                            <div class="empty-icon">🧠</div>
+                            <div class="empty-text">Load an EEG signal and click<br>"Run Analysis" to see results</div>
+                        </div>
+                        <!-- PREVENTIVE MEASURES -->
+                        <div class="card">
+                            <div class="card-label">Recommended Measures</div>
+
+                            <div id="precautionsBox" style="font-size:14px;color:var(--muted);line-height:1.7;">
+                                Run analysis to see precautions and safety measures.
+                            </div>
+                        </div>
+                        <div id="resultContent" style="display:none;width:100%;">
+                            <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;">
+                                <div class="result-icon" id="resultIcon">?</div>
+                                <div>
+                                    <div class="result-label" id="resultLabel">—</div>
+                                    <div class="result-sub" id="resultSub">—</div>
+                                </div>
+                                <div style="margin-left:auto;text-align:right;">
+                                    <div class="confidence-val" id="confidenceVal">—</div>
+                                    <div class="confidence-label">CONFIDENCE</div>
+                                </div>
+                            </div>
+                            <div class="prob-row prob-normal">
+                                <span class="prob-name">Normal</span>
+                                <div class="prob-bar-bg">
+                                    <div class="prob-bar-fill" id="barNormal"></div>
+                                </div>
+                                <span class="prob-pct" id="pctNormal">—</span>
+                            </div>
+                            <div class="prob-row prob-preictal">
+                                <span class="prob-name">Preictal</span>
+                                <div class="prob-bar-bg">
+                                    <div class="prob-bar-fill" id="barPreictal"></div>
+                                </div>
+                                <span class="prob-pct" id="pctPreictal">—</span>
+                            </div>
+                            <div class="prob-row prob-seizure">
+                                <span class="prob-name">Seizure</span>
+                                <div class="prob-bar-bg">
+                                    <div class="prob-bar-fill" id="barSeizure"></div>
+                                </div>
+                                <span class="prob-pct" id="pctSeizure">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="downloadReport()" class="analyze-btn" style="margin-top:16px;">
+                    DOWNLOAD REPORT (PDF)
+                </button>
+                <div class="card">
+                    <div class="card-label">Analysis History</div>
+                    <div id="historyEmpty" class="empty-state" style="padding:24px;">
+                        <div class="empty-text" style="font-size:12px;">No analyses run yet</div>
+                    </div>
+                    <table class="history-table" id="historyTable" style="display:none;">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Time</th>
+                                <th>Signal Type</th>
+                                <th>Prediction</th>
+                                <th>Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyBody"></tbody>
+                    </table>
+                </div>
+
+            </div>
+        </main>
+    </div><!-- /appPage -->
+
+
+    <!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════ -->
+    <script>
+        /* ═══════════════════════════════════════════════════════════
+           USER STORE  (localStorage-backed)
+        ══════════════════════════════════════════════════════════ */
+        function getUsers() { return JSON.parse(localStorage.getItem('ns_users') || '[]'); }
+        function saveUsers(u) { localStorage.setItem('ns_users', JSON.stringify(u)); }
+        function getSession() { return JSON.parse(localStorage.getItem('ns_session') || 'null'); }
+        function saveSession(u) { localStorage.setItem('ns_session', JSON.stringify(u)); }
+        function clearSession() { localStorage.removeItem('ns_session'); }
+
+        /* seed demo account */
+        (function seedDemo() {
+            const users = getUsers();
+            if (!users.find(u => u.email === 'demo@neuroscan.ai')) {
+                users.push({ firstName: 'Demo', lastName: 'User', email: 'demo@neuroscan.ai', password: 'demo1234', role: 'Researcher' });
+                saveUsers(users);
+            }
+        })();
+
+        /* ═══════════════════════════════════════════════════════════
+           AUTH — TAB SWITCH
+        ══════════════════════════════════════════════════════════ */
+        function switchTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach((t, i) =>
+                t.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'))
+            );
+            document.getElementById('loginForm').classList.toggle('active', tab === 'login');
+            document.getElementById('registerForm').classList.toggle('active', tab === 'register');
+            clearErrors();
+        }
+        function clearErrors() {
+            document.querySelectorAll('.field-hint.err').forEach(e => e.classList.remove('show'));
+            document.querySelectorAll('.field input').forEach(i => i.classList.remove('error'));
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           TOAST
+        ══════════════════════════════════════════════════════════ */
+        function showToast(msg, type = 'ok') {
+            const t = document.getElementById('toast');
+            const colors = { ok: '#22c55e', err: '#ef4444', warn: '#f59e0b', info: '#00c8b4' };
+            document.getElementById('toastDot').style.background = colors[type] || colors.info;
+            document.getElementById('toastMsg').textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3200);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           PASSWORD STRENGTH
+        ══════════════════════════════════════════════════════════ */
+        function checkStrength(pw) {
+            const bars = [1, 2, 3, 4].map(i => document.getElementById('pb' + i));
+            const hint = document.getElementById('pwHint');
+            bars.forEach(b => { b.className = 'pw-bar'; });
+            if (!pw.length) { hint.textContent = 'Minimum 8 characters'; hint.style.color = 'var(--muted)'; return; }
+            let score = 0;
+            if (pw.length >= 8) score++;
+            if (/[A-Z]/.test(pw)) score++;
+            if (/[0-9]/.test(pw)) score++;
+            if (/[^A-Za-z0-9]/.test(pw)) score++;
+            const cls = ['s1', 's2', 's3', 's4'];
+            for (let i = 0; i < score; i++) bars[i].classList.add(cls[score - 1]);
+            const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+            const hColors = ['', 'var(--seizure)', 'var(--preictal)', 'var(--accent)', 'var(--normal)'];
+            hint.textContent = labels[score];
+            hint.style.color = hColors[score];
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           LOGIN
+        ══════════════════════════════════════════════════════════ */
+        function handleLogin(e) {
+            e.preventDefault(); clearErrors();
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true; btn.classList.add('loading');
+            setTimeout(() => {
+                const user = getUsers().find(u => u.email === email);
+                if (!user) {
+                    document.getElementById('loginEmail').classList.add('error');
+                    document.getElementById('loginEmailErr').classList.add('show');
+                    btn.disabled = false; btn.classList.remove('loading'); return;
+                }
+                if (user.password !== pass) {
+                    document.getElementById('loginPass').classList.add('error');
+                    document.getElementById('loginPassErr').classList.add('show');
+                    btn.disabled = false; btn.classList.remove('loading'); return;
+                }
+                if (document.getElementById('rememberMe').checked) saveSession(user);
+                enterApp(user);
+                btn.disabled = false; btn.classList.remove('loading');
+            }, 800);
+        }
+        function demoLogin() { enterApp(getUsers().find(u => u.email === 'demo@neuroscan.ai')); }
+        function showForgot() { showToast('Password reset not available in demo mode.', 'warn'); }
+
+        /* ═══════════════════════════════════════════════════════════
+           REGISTER
+        ══════════════════════════════════════════════════════════ */
+        function handleRegister(e) {
+            e.preventDefault(); clearErrors();
+            const first = document.getElementById('regFirst').value.trim();
+            const last = document.getElementById('regLast').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const role = document.getElementById('regRole').value.trim();
+            const pass = document.getElementById('regPass').value;
+            const pass2 = document.getElementById('regPass2').value;
+            const btn = document.getElementById('registerBtn');
+            if (pass !== pass2) {
+                document.getElementById('regPass2').classList.add('error');
+                document.getElementById('regPassErr').classList.add('show');
+                return;
+            }
+            btn.disabled = true; btn.classList.add('loading');
+            setTimeout(() => {
+                const users = getUsers();
+                if (users.find(u => u.email === email)) {
+                    document.getElementById('regEmail').classList.add('error');
+                    document.getElementById('regEmailErr').classList.add('show');
+                    btn.disabled = false; btn.classList.remove('loading'); return;
+                }
+                const newUser = { firstName: first, lastName: last, email, password: pass, role: role || 'User' };
+                users.push(newUser); saveUsers(users);
+                showToast('Account created! Signing you in…', 'ok');
+                setTimeout(() => enterApp(newUser), 800);
+                btn.disabled = false; btn.classList.remove('loading');
+            }, 900);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           ENTER / LEAVE APP
+        ══════════════════════════════════════════════════════════ */
+        function enterApp(user) {
+            const loginPage = document.getElementById('loginPage');
+            loginPage.classList.add('hiding');
+            document.getElementById('userNameDisplay').textContent = user.firstName + ' ' + user.lastName;
+            document.getElementById('userAvatar').textContent = user.firstName[0].toUpperCase();
+            setTimeout(() => {
+                loginPage.style.display = 'none';
+                document.getElementById('appPage').classList.add('visible');
+                drawWaveform(null);
+            }, 480);
+        }
+        function logout() {
+            clearSession();
+            document.getElementById('appPage').classList.remove('visible');
+            const lp = document.getElementById('loginPage');
+            lp.style.display = 'flex'; lp.classList.remove('hiding');
+            clearResult();
+            currentSignal = null; currentEdfFile = null;
+            document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('analyzeBtn').disabled = true;
+            document.getElementById('edfLoaded').style.display = 'none';
+            document.getElementById('uploadZoneLabel').style.display = '';
+            showToast('You have been signed out.', 'info');
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           AUTO-LOGIN + INIT
+        ══════════════════════════════════════════════════════════ */
+        window.addEventListener('DOMContentLoaded', () => {
+            const session = getSession();
+            if (session) enterApp(session);
+            animateDecoCanvas();
+            animateBgWave();
+        });
+
+        /* ═══════════════════════════════════════════════════════════
+           DECORATIVE EEG CANVAS (login page)
+        ══════════════════════════════════════════════════════════ */
+        let decoOffset = 0;
+        function animateDecoCanvas() {
+            const c = document.getElementById('decoCanvas');
+            if (!c) return;
+            const ctx = c.getContext('2d'), W = c.width, H = c.height;
+            (function frame() {
+                ctx.clearRect(0, 0, W, H);
+                ctx.strokeStyle = '#00c8b4'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+                ctx.beginPath();
+                for (let x = 0; x < W; x++) {
+                    const t = (x + decoOffset) / W * 4 * Math.PI;
+                    const y = H / 2 + Math.sin(t) * 12 + Math.sin(t * 2.3 + 1) * 6 + Math.sin(t * 4.7 + 2) * 3;
+                    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.stroke(); decoOffset += 1.5; requestAnimationFrame(frame);
+            })();
+        }
+        function animateBgWave() {
+            const path = document.getElementById('bgWave');
+            if (!path) return;
+            let off = 0;
+            (function frame() {
+                const W = 1440, H = 200, pts = [];
+                for (let x = 0; x <= W; x += 12) {
+                    const y = H / 2 + Math.sin((x + off) / 120) * 40 + Math.sin((x + off) / 60) * 15;
+                    pts.push(`${x},${y}`);
+                }
+                path.setAttribute('d', 'M ' + pts.join(' L ')); off += 0.8; requestAnimationFrame(frame);
+            })();
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           EEG CANVAS WAVEFORM
+        ══════════════════════════════════════════════════════════ */
+        function drawWaveform(signal, color = '#00c8b4') {
+            const canvas = document.getElementById('eegCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 4; i++) {
+                const y = (H / 4) * i;
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+            }
+            if (!signal || signal.length < 2) return;
+            const step = W / signal.length;
+            const mn = Math.min(...signal), mx = Math.max(...signal), range = mx - mn || 1, pad = H * 0.1;
+            const toY = v => pad + ((mx - v) / range) * (H - 2 * pad);
+            ctx.shadowColor = color; ctx.shadowBlur = 8;
+            ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+            ctx.beginPath();
+            signal.forEach((v, i) => { i === 0 ? ctx.moveTo(i * step, toY(v)) : ctx.lineTo(i * step, toY(v)); });
+            ctx.stroke(); ctx.shadowBlur = 0;
+            document.getElementById('sampleCount').textContent = signal.length.toLocaleString();
+            document.getElementById('sigDuration').textContent = (signal.length / 256).toFixed(1) + ' s';
+            document.getElementById('sigAmp').textContent = (mx - mn).toFixed(1) + ' µV';
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           SPARKLINE CHART
+        ══════════════════════════════════════════════════════════ */
+        function drawSparkline(canvasId, data, color) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || !data.length) return;
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr || 200 * dpr;
+            canvas.height = 48 * dpr;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            const W = canvas.width / dpr, H = canvas.height / dpr;
+            ctx.clearRect(0, 0, W, H);
+
+            const mn = Math.min(...data), mx = Math.max(...data), range = mx - mn || 0.01;
+            const toY = v => H - 4 - ((v - mn) / range) * (H - 8);
+            const step = W / (Math.max(data.length - 1, 1));
+
+            // gradient fill
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, color + '55');
+            grad.addColorStop(1, color + '00');
+            ctx.beginPath();
+            data.forEach((v, i) => i === 0 ? ctx.moveTo(i * step, toY(v)) : ctx.lineTo(i * step, toY(v)));
+            ctx.lineTo((data.length - 1) * step, H);
+            ctx.lineTo(0, H); ctx.closePath();
+            ctx.fillStyle = grad; ctx.fill();
+
+            // line
+            ctx.beginPath();
+            data.forEach((v, i) => i === 0 ? ctx.moveTo(i * step, toY(v)) : ctx.lineTo(i * step, toY(v)));
+            ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.lineJoin = 'round';
+            ctx.shadowColor = color; ctx.shadowBlur = 4;
+            ctx.stroke(); ctx.shadowBlur = 0;
+
+            // last point dot
+            const lx = (data.length - 1) * step, ly = toY(data[data.length - 1]);
+            ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+            ctx.fillStyle = color; ctx.fill();
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           STATE
+        ══════════════════════════════════════════════════════════ */
+        let currentSignal = null;
+        let currentEdfFile = null;      // File object when EDF uploaded
+        let currentSource = 'demo';    // 'demo' | 'edf'
+        let analysisCount = 0;
+        let sessionLoss = [];
+        let sessionSensitivity = [];
+        const API = 'https://eeg-signals-identification-project.onrender.com/api';
+
+
+        /* ═══════════════════════════════════════════════════════════
+           DEMO SIGNAL LOADER
+        ══════════════════════════════════════════════════════════ */
+        async function loadDemo(type, evt) {
+            document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+            if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+            currentEdfFile = null;
+            currentSource = 'demo';
+            document.getElementById('edfLoaded').style.display = 'none';
+            document.getElementById('uploadZoneLabel').style.display = '';
+            const colors = { normal: '#22c55e', preictal: '#f59e0b', seizure: '#ef4444', postictal: '#8b5cf6' };
+            try {
+                const res = await fetch(`${API}/demo-signal/${type}`);
+                if (!res.ok) throw new Error();
+                currentSignal = (await res.json()).signal;
+            } catch {
+                currentSignal = generateLocalSignal(type);
+            }
+            drawWaveform(currentSignal, colors[type]);
+            document.getElementById('analyzeBtn').disabled = false;
+            clearResult();
+        }
+
+        function generateLocalSignal(type) {
+            const N = 512, t = Array.from({ length: N }, (_, i) => i / 256);
+            if (type === 'seizure') return t.map((ti, i) => { const b = (Math.floor(i / 60) % 2 === 0) ? 1 : 0.2; return Math.sin(2 * Math.PI * 3 * ti) * 800 * b + Math.sin(2 * Math.PI * 7 * ti) * 300 * b + (Math.random() - .5) * 100; });
+            if (type === 'preictal') return t.map((ti, i) => { const r = 1 + i / N; return (Math.sin(2 * Math.PI * 4 * ti) * 60 + Math.sin(2 * Math.PI * 8 * ti) * 30 + (Math.random() - .5) * 20) * r; });
+            return t.map(ti => Math.sin(2 * Math.PI * 10 * ti) * 20 + Math.sin(2 * Math.PI * 20 * ti) * 10 + (Math.random() - .5) * 15);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           EDF UPLOAD
+        ══════════════════════════════════════════════════════════ */
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.name.toLowerCase().endsWith('.edf')) {
+                showToast('Only .edf files are accepted.', 'err');
+                event.target.value = '';
+                return;
+            }
+
+            currentEdfFile = file;
+            currentSignal = null;
+            currentSource = 'edf';
+            document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+
+            // Show EDF loaded badge
+            document.getElementById('edfName').textContent = file.name;
+            document.getElementById('edfChannelInfo').textContent = 'Channels will be read from file (16–22 max)';
+            document.getElementById('edfLoaded').style.display = 'flex';
+            document.getElementById('uploadZoneLabel').style.display = 'none';
+
+            // Draw placeholder waveform
+            const placeholder = Array.from({ length: 512 }, (_, i) => Math.sin(i * 0.05) * 30 + (Math.random() - .5) * 10);
+            drawWaveform(placeholder, '#6b8a96');
+            document.getElementById('sampleCount').textContent = 'Loading…';
+            document.getElementById('sigDuration').textContent = '—';
+            document.getElementById('sigAmp').textContent = '—';
+
+            document.getElementById('analyzeBtn').disabled = false;
+            clearResult();
+            showToast('EDF file loaded — click Run Analysis', 'info');
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           ANALYZE SIGNAL
+        ══════════════════════════════════════════════════════════ */
+        async function analyzeSignal() {
+            if (!currentSignal && !currentEdfFile) return;
+
+            const btn = document.getElementById('analyzeBtn');
+            const btnTxt = document.getElementById('analyzeBtnText');
+            btn.disabled = true; btn.classList.add('loading');
+            btnTxt.textContent = 'ANALYZING…';
+
+            try {
+                let res;
+
+                if (currentEdfFile) {
+                    // ── EDF upload path ──
+                    const fd = new FormData();
+                    fd.append('edf_file', currentEdfFile);
+                    res = await fetch(`${API}/predict`, { method: 'POST', body: fd });
+                } else {
+                    // ── Demo JSON path ──
+                    res = await fetch(`${API}/predict`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ signal: currentSignal })
+                    });
+                }
+
+                const data = await res.json();
+                if (!res.ok) {
+                    showToast(data.error || 'Server error', 'err');
+                    return;
+                }
+
+                // Update waveform from server's processed signal
+                if (data.display_signal && data.display_signal.length) {
+                    const col = data.predicted_label === 'Seizure' ? '#ef4444'
+                        : data.predicted_label === 'Preictal' ? '#f59e0b'
+                            : data.predicted_label === 'Postictal' ? '#8b5cf6' : '#22c55e';
+                    drawWaveform(data.display_signal, col);
+                    currentSignal = data.display_signal;
+                }
+
+                // Update EDF channel info
+                if (currentEdfFile && data.num_channels) {
+                    document.getElementById('edfChannelInfo').textContent =
+                        `${data.num_channels} channel(s) used · padded to 22 for model`;
+                }
+
+                showResult(data);
+
+            } catch (err) {
+                showToast('Cannot reach server — check that app.py is running on port 5000.', 'err');
+                console.error(err);
+            } finally {
+                btn.classList.remove('loading');
+                btnTxt.textContent = 'RUN ANALYSIS';
+                btn.disabled = false;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           SHOW RESULT
+        ══════════════════════════════════════════════════════════ */
+        function showResult(data) {
+            const label = data.predicted_label;
+            const conf = parseFloat(data.confidence);
+            const probs = data.probabilities;
+            const icons = { Normal: '✅', Preictal: '⚠️', Seizure: '🚨', Postictal: '🧠' };
+            const subs = {
+                Normal: 'No epileptic activity detected',
+                Preictal: 'Pre-seizure state — monitor closely',
+                Seizure: 'Active seizure detected — alert!',
+                Postictal: 'Post-seizure recovery state detected'
+            };
+
+            const rd = document.getElementById('resultDisplay');
+            rd.className = 'result-display result-' + label.toLowerCase();
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('resultContent').style.display = 'block';
+            document.getElementById('resultIcon').textContent = icons[label];
+            document.getElementById('resultLabel').textContent = label.toUpperCase();
+            document.getElementById('resultSub').textContent = subs[label];
+            document.getElementById('confidenceVal').textContent = conf.toFixed(1) + '%';
+
+            setTimeout(() => {
+                document.getElementById('barNormal').style.width = probs.Normal + '%';
+                document.getElementById('barPreictal').style.width = probs.Preictal + '%';
+                document.getElementById('barSeizure').style.width = probs.Seizure + '%';
+                document.getElementById('barPostictal').style.width = probs.Postictal + '%';
+            }, 50);
+            document.getElementById('pctNormal').textContent = probs.Normal + '%';
+            document.getElementById('pctPreictal').textContent = probs.Preictal + '%';
+            document.getElementById('pctSeizure').textContent = probs.Seizure + '%';
+            document.getElementById('pctPostictal').textContent = probs.Postictal + '%';
+
+            // ── Alert banner ──
+            const banner = document.getElementById('alertBanner');
+            if (label === 'Seizure') {
+                banner.className = 'alert-banner show alert-seizure';
+                document.getElementById('alertIcon').textContent = '🚨';
+                document.getElementById('alertText').textContent = 'Seizure activity detected. Immediate medical attention recommended.';
+            } else if (label === 'Preictal') {
+                banner.className = 'alert-banner show alert-seizure';
+                document.getElementById('alertIcon').textContent = '⚠️';
+                document.getElementById('alertText').textContent = 'Pre-seizure activity detected. Monitor the patient closely.';
+            } else if (label === 'Postictal') {
+                banner.className = 'alert-banner show alert-postictal';
+                document.getElementById('alertIcon').textContent = '🧠';
+                document.getElementById('alertText').textContent = 'Patient is in postictal phase. Recovery and rest required.';
+            } else {
+                banner.className = 'alert-banner show alert-normal';
+                document.getElementById('alertIcon').textContent = '✅';
+                document.getElementById('alertText').textContent = 'EEG signal classified as Normal. No epileptic activity detected.';
+            }
+
+            // ── CWT scalogram ──
+            if (data.cwt_image_b64) {
+                const img = document.getElementById('cwtImage');
+                img.src = 'data:image/png;base64,' + data.cwt_image_b64;
+                const cwtCard = document.getElementById('cwtCard');
+                cwtCard.classList.add('visible');
+                cwtCard.style.display = 'block';
+                document.getElementById('cwtChInfo').textContent =
+                    data.num_channels ? `Ch 1 of ${data.num_channels}` : 'Ch 1';
+            }
+
+            // ── Session metrics ──
+            if (data.session_metrics) {
+                const sm = data.session_metrics;
+                sessionLoss.push(sm.loss);
+                sessionSensitivity.push(sm.sensitivity);
+                document.getElementById('lossVal').textContent = sm.loss.toFixed(3);
+                document.getElementById('sensitivityVal').textContent = sm.sensitivity.toFixed(1) + '%';
+                document.getElementById('sessionMetricsCard').style.display = 'block';
+                // draw sparklines after layout settles
+                requestAnimationFrame(() => {
+                    drawSparkline('lossChart', sessionLoss, '#f59e0b');
+                    drawSparkline('sensitivityChart', sessionSensitivity, '#ef4444');
+                });
+            }
+
+            updatePrecautions(label);
+            addHistory(label, conf, data.num_channels);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           CLEAR RESULT
+        ══════════════════════════════════════════════════════════ */
+        function clearResult() {
+            document.getElementById('resultDisplay').className = 'result-display';
+            document.getElementById('emptyState').style.display = '';
+            document.getElementById('resultContent').style.display = 'none';
+            document.getElementById('alertBanner').className = 'alert-banner';
+            document.getElementById('cwtCard').classList.remove('visible');
+            document.getElementById('cwtCard').style.display = 'none';
+            document.getElementById('sessionMetricsCard').style.display = 'none';
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           HISTORY
+        ══════════════════════════════════════════════════════════ */
+        function addHistory(label, conf, numChannels) {
+            analysisCount++;
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const bc = 'badge-' + label.toLowerCase();
+            const src = currentEdfFile ? currentEdfFile.name.replace('.edf', '') : 'Demo';
+            const chTxt = numChannels ? `${numChannels}ch` : '—';
+            document.getElementById('historyEmpty').style.display = 'none';
+            document.getElementById('historyTable').style.display = 'table';
+            const row = document.createElement('tr');
+            row.innerHTML = `
+    <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${String(analysisCount).padStart(3, '0')}</td>
+    <td style="font-family:var(--mono);font-size:12px;">${time}</td>
+    <td style="font-size:11px;color:var(--muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${src}">${src}</td>
+    <td style="font-family:var(--mono);font-size:11px;color:var(--muted);">${chTxt}</td>
+    <td><span class="badge ${bc}">${label}</span></td>
+    <td style="font-family:var(--mono);font-size:13px;color:var(--accent)">${conf}%</td>
+  `;
+            document.getElementById('historyBody').prepend(row);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           PDF REPORT
+        ══════════════════════════════════════════════════════════ */
+        async function downloadReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const label = document.getElementById('resultLabel').textContent;
+            const confidence = document.getElementById('confidenceVal').textContent;
+            const precautions = document.getElementById('precautionsBox')?.innerText || '';
+            const lossLatest = sessionLoss.length ? sessionLoss[sessionLoss.length - 1].toFixed(4) : '—';
+            const sensLatest = sessionSensitivity.length ? sessionSensitivity[sessionSensitivity.length - 1].toFixed(1) + '%' : '—';
+            const date = new Date().toLocaleString();
+            const src = currentEdfFile ? currentEdfFile.name : 'Demo signal';
+
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+            doc.text('NeuroScan EEG Analysis Report', 20, 20);
+            doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+            doc.text('Generated: ' + date, 20, 30);
+            doc.text('Source: ' + src, 20, 37);
+            doc.setFontSize(14);
+            doc.text('Prediction:', 20, 52); doc.text(label, 70, 52);
+            doc.text('Confidence:', 20, 62); doc.text(confidence, 70, 62);
+            doc.text('Loss (NLL):', 20, 72); doc.text(lossLatest, 70, 72);
+            doc.text('Sensitivity:', 20, 82); doc.text(sensLatest, 70, 82);
+            doc.setFontSize(13);
+            doc.text('Precautions & Measures:', 20, 97);
+            doc.setFontSize(11);
+            doc.text(doc.splitTextToSize(precautions, 170), 20, 107);
+            doc.save('NeuroScan_EEG_Report.pdf');
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           PRECAUTIONS
+        ══════════════════════════════════════════════════════════ */
+        function updatePrecautions(label) {
+            const box = document.getElementById('precautionsBox');
+            if (label === 'Normal') {
+                box.innerHTML = `• Maintain proper sleep cycle<br>• Avoid stress and fatigue<br>• Balanced diet and hydration<br>• Routine health checkups`;
+            } else if (label === 'Preictal') {
+                box.innerHTML = `• Avoid triggers (stress, flashing lights)<br>• Keep patient under observation<br>• Ensure safe surroundings<br>• Keep medication ready<br>• Inform caregivers`;
+            } else if (label === 'Seizure') {
+                box.innerHTML = `• Do NOT restrain the patient<br>• Place patient on side (recovery position)<br>• Remove nearby dangerous objects<br>• Do NOT put anything in mouth<br>• Call emergency services immediately<br>• Stay with patient until recovery`;
+            } else if (label === 'Postictal') {
+                box.innerHTML = `• Allow the patient to rest quietly<br>• Confusion and exhaustion are normal<br>• Do not offer food or drink until fully alert<br>• Stay with them until fully conscious<br>• Comfort and reassure the patient`;
+            }
+        }
+    </script>
+</body>
+
+</html>
