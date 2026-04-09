@@ -1,7 +1,8 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 flask>=2.3
 flask-cors>=4.0
 numpy>=1.24
-torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2+cpu
 mne>=1.6
 PyWavelets>=1.4
 matplotlib>=3.7
