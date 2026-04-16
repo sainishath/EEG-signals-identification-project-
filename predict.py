@@ -12,7 +12,7 @@ def main():
 
     print("1. Loading the Hybrid Architecture...")
     # We must instantiate the exact same model class that was used for training
-    model = EEG_2D_Hybrid_Model(num_channels=22, num_classes=3)
+    model = EEG_2D_Hybrid_Model(num_channels=22, num_classes=4)
     
     print(f"2. Loading Trained Weights from '{model_path}' into the Model...")
     # Load the state dictionary (the weights) back into the architecture
@@ -35,7 +35,7 @@ def main():
         probabilities = torch.softmax(raw_outputs, dim=1)[0]
     
     # Map the model's output classes to readable strings based on your project
-    classes = ["Normal", "Seizure (Ictal)", "Other"]
+    classes = ["Normal", "Preictal", "Seizure", "Postictal"]
     
     print("\n" + "="*30)
     print("         RESULTS")

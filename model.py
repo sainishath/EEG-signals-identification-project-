@@ -50,7 +50,7 @@ except (RuntimeError, ValueError) as e:
 
 # --- 1. The 2D Hybrid Model (Optimized) ---
 class EEG_2D_Hybrid_Model(nn.Module):
-    def __init__(self, num_channels=22, num_classes=3):
+    def __init__(self, num_channels=22, num_classes=4):
         super(EEG_2D_Hybrid_Model, self).__init__()
         
         # 1. 2D CNN Extractor (Early Fusion of all channels)
@@ -144,9 +144,9 @@ def get_training_components(model):
     from torch.optim import AdamW
     from torch.optim.lr_scheduler import ReduceLROnPlateau
     
-    # Class weights for imbalanced data (Normal, Preictal, Ictal)
+    # Class weights for imbalanced data (Normal, Preictal, Ictal, Postictal)
     # This prevents the model from just guessing "Normal" 99% of the time.
-    weights = torch.tensor([0.1, 0.4, 0.9], dtype=torch.float32)
+    weights = torch.tensor([0.1, 0.4, 0.9, 0.4], dtype=torch.float32)
     
     if torch.cuda.is_available():
         weights = weights.cuda()
@@ -172,13 +172,13 @@ if __name__ == "__main__":
     dummy_input = torch.randn(4, 22, 50, 512) 
     
     # Initialize the model
-    model = EEG_2D_Hybrid_Model(num_channels=22, num_classes=3)
+    model = EEG_2D_Hybrid_Model(num_channels=22, num_classes=4)
     
     # Pass data through
     predictions = model(dummy_input)
     probabilities = torch.softmax(predictions, dim=1)
     
     print(f"Input Scalogram Shape: {dummy_input.shape}")
-    print(f"Output Probabilities Shape: {probabilities.shape} <-- [Batch Size, 3 Classes]")
+    print(f"Output Probabilities Shape: {probabilities.shape} <-- [Batch Size, 4 Classes]")
     print(f"Sample Probabilities:\n{probabilities.detach().numpy()}")
     print("\n2D Model structure is verified and syntactically correct!")

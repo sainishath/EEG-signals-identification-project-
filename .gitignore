@@ -8,6 +8,7 @@ __pycache__/
 
 # Data sets and archives
 dataset/
+processed_data/
 dataset parts/
 dataset zips/
 extracted/
@@ -16,7 +17,9 @@ skilling files/
 *.edf
 *.csv
 *.txt
+training_monitor.log
 !requirements.txt
+!processed_metadata.csv
 !New folder/project info notes.txt
 !dataset/**/chb01-summary.txt
 
