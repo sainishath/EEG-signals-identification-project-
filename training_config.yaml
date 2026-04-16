@@ -1,6 +1,0 @@
-batch_size: 32
-max_gpu_mem_percent: 70
-max_cpu_percent: 50
-num_workers: 2
-checkpoint_interval_seconds: 60
-log_file: training_monitor.log
