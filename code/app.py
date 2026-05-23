@@ -22,7 +22,7 @@ import matplotlib
 matplotlib.use('Agg')        # non-interactive backend (no GUI)
 import matplotlib.pyplot as plt
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 # ── Path setup ────────────────────────────────────────────────────────────────
@@ -195,6 +195,11 @@ def build_response(signal_1d, probs, pred_idx, n_channels_used):
     }
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
+@app.route('/')
+def dashboard():
+    return send_from_directory(ROOT_DIR, 'neuroscan_dashboard.html')
+
 
 @app.route('/api/predict', methods=['POST'])
 def predict():

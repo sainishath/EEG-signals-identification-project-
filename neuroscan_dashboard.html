@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroScan // EEG Diagnostic Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=Inter:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #070c0e;
+            --bg-card: #0c1417;
+            --bg-card-hover: #121e22;
+            --border-color: #1a2c31;
+            --border-glow: rgba(0, 200, 180, 0.15);
+            
+            /* State Colors */
+            --color-normal: #00c8b4;
+            --color-preictal: #f5a623;
+            --color-seizure: #ff3b30;
+            --color-postictal: #af52de;
+            
+            --text-main: #e2edf2;
+            --text-muted: #6b8a96;
+            --accent-glow: 0 0 15px rgba(0, 200, 180, 0.25);
+            --font-display: 'Orbitron', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-deep);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-normal);
+        }
+
+        /* Header */
+        header {
+            background-color: var(--bg-card);
+            border-bottom: 2px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .header-title-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-logo {
+            width: 32px;
+            height: 32px;
+            background: radial-gradient(circle, var(--color-normal) 20%, transparent 70%);
+            border: 2px solid var(--color-normal);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 900;
+            font-size: 14px;
+            color: var(--color-normal);
+            box-shadow: var(--accent-glow);
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 5px rgba(0, 200, 180, 0.2); }
+            to { box-shadow: 0 0 15px rgba(0, 200, 180, 0.6); }
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: 18px;
+            letter-spacing: 2px;
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(226, 237, 242, 0.1);
+        }
+
+        .header-meta {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-muted);
+            border-left: 1px solid var(--border-color);
+            padding-left: 15px;
+        }
+
+        .api-config {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-muted);
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .status-dot.connected {
+            background-color: var(--color-normal);
+            color: var(--color-normal);
+        }
+
+        .status-dot.error {
+            background-color: var(--color-seizure);
+            color: var(--color-seizure);
+        }
+
+        .api-input-wrapper {
+            display: flex;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .api-input-wrapper input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            padding: 6px 12px;
+            width: 240px;
+            outline: none;
+        }
+
+        .api-input-wrapper button {
+            background: var(--border-color);
+            border: none;
+            color: var(--text-main);
+            padding: 6px 12px;
+            font-family: var(--font-display);
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .api-input-wrapper button:hover {
+            background: var(--color-normal);
+            color: #000;
+        }
+
+        /* Main Workspace Layout */
+        .workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 320px 1fr 380px;
+            grid-template-rows: 1fr 220px;
+            gap: 15px;
+            padding: 15px;
+            height: calc(100vh - 60px);
+            background-color: var(--bg-deep);
+        }
+
+        /* Panels Container */
+        .panel {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-header {
+            padding: 10px 16px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-family: var(--font-display);
+            font-size: 12px;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            color: var(--text-main);
+            text-transform: uppercase;
+        }
+
+        .panel-subtitle {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Left Panel - Control & Feed */
+        #left-panel {
+            grid-row: 1 / 3;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 6px;
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--color-normal);
+            background: rgba(0, 200, 180, 0.05);
+            box-shadow: inset 0 0 10px rgba(0, 200, 180, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 24px;
+            color: var(--text-muted);
+            transition: color 0.3s;
+        }
+
+        .upload-zone:hover .upload-icon {
+            color: var(--color-normal);
+        }
+
+        .upload-text {
+            font-size: 12px;
+            color: var(--text-main);
+        }
+
+        .upload-sub {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .demo-section-title {
+            font-family: var(--font-display);
+            font-size: 11px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .demo-buttons-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .demo-btn {
+            background-color: rgba(26, 44, 49, 0.2);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 8px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .demo-btn::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: currentColor;
+        }
+
+        .demo-btn.normal { color: var(--color-normal); }
+        .demo-btn.preictal { color: var(--color-preictal); }
+        .demo-btn.seizure { color: var(--color-seizure); }
+        .demo-btn.postictal { color: var(--color-postictal); }
+
+        .demo-btn:hover {
+            background-color: var(--bg-card-hover);
+            border-color: currentColor;
+            box-shadow: 0 0 10px rgba(currentcolor, 0.15);
+        }
+
+        .channel-monitor-list {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            padding: 8px;
+            max-height: 280px;
+        }
+
+        .channel-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 4px 6px;
+            background: rgba(25, 40, 45, 0.15);
+            border-radius: 2px;
+            border: 1px solid transparent;
+        }
+
+        .channel-name {
+            color: var(--text-muted);
+        }
+
+        .channel-amplitude-bar-outer {
+            width: 120px;
+            height: 6px;
+            background-color: rgba(0,0,0,0.4);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .channel-amplitude-bar-inner {
+            height: 100%;
+            width: 0%;
+            background-color: var(--color-normal);
+            transition: width 0.1s linear;
+        }
+
+        .channel-val {
+            min-width: 45px;
+            text-align: right;
+            color: var(--text-main);
+        }
+
+        /* Center Panel - CWT Scalogram */
+        #center-panel {
+            grid-column: 2 / 3;
+            grid-row: 1 / 2;
+        }
+
+        .scalogram-viewer {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #04080a;
+            position: relative;
+            overflow: hidden;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 0, 0, 0.5);
+        }
+
+        .scalogram-img-wrapper {
+            position: relative;
+            max-width: 96%;
+            max-height: 96%;
+            display: none;
+        }
+
+        .scalogram-img {
+            width: 100%;
+            height: auto;
+            border-radius: 2px;
+            display: block;
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to bottom, transparent, var(--color-normal), transparent);
+            box-shadow: 0 0 10px var(--color-normal);
+            animation: scan 3s infinite linear;
+            pointer-events: none;
+            display: none;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+
+        .scalogram-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 24px;
+        }
+
+        .placeholder-icon {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 700;
+            animation: breathe 3s infinite alternate;
+        }
+
+        @keyframes breathe {
+            from { opacity: 0.2; transform: scale(0.95); }
+            to { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        .scalogram-footer {
+            padding: 10px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* Right Panel - Results & Diagnostic Logs */
+        #right-panel {
+            grid-column: 3 / 4;
+            grid-row: 1 / 3;
+        }
+
+        .classification-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .classification-badge {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 6px 20px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid var(--text-muted);
+            color: var(--text-muted);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+
+        .classification-badge.normal {
+            border-color: var(--color-normal);
+            color: var(--color-normal);
+            box-shadow: 0 0 15px rgba(0, 200, 180, 0.25);
+        }
+
+        .classification-badge.preictal {
+            border-color: var(--color-preictal);
+            color: var(--color-preictal);
+            box-shadow: 0 0 15px rgba(245, 166, 35, 0.25);
+        }
+
+        .classification-badge.seizure {
+            border-color: var(--color-seizure);
+            color: var(--color-seizure);
+            box-shadow: 0 0 20px rgba(255, 59, 48, 0.4);
+            animation: alert-flash 1s infinite alternate;
+        }
+
+        @keyframes alert-flash {
+            0% { box-shadow: 0 0 10px rgba(255, 59, 48, 0.2); }
+            100% { box-shadow: 0 0 25px rgba(255, 59, 48, 0.7); border-color: #ff5e55; }
+        }
+
+        .classification-badge.postictal {
+            border-color: var(--color-postictal);
+            color: var(--color-postictal);
+            box-shadow: 0 0 15px rgba(175, 82, 222, 0.25);
+        }
+
+        .classification-confidence {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .classification-confidence span {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .confidence-meters-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .confidence-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .confidence-meta {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 11px;
+        }
+
+        .confidence-bar-outer {
+            width: 100%;
+            height: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .confidence-bar-inner {
+            height: 100%;
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.8s cubic-bezier(0.1, 0.8, 0.3, 1);
+        }
+
+        .confidence-row.normal .confidence-bar-inner { background-color: var(--color-normal); }
+        .confidence-row.preictal .confidence-bar-inner { background-color: var(--color-preictal); }
+        .confidence-row.seizure .confidence-bar-inner { background-color: var(--color-seizure); }
+        .confidence-row.postictal .confidence-bar-inner { background-color: var(--color-postictal); }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .metric-card {
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .metric-label {
+            font-family: var(--font-display);
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .metric-value {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .console-log {
+            flex: 1;
+            background-color: #04080a;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: #92b5c2;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 220px;
+        }
+
+        .console-log::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .console-line {
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+
+        .console-line.info { color: #5bc0de; }
+        .console-line.success { color: var(--color-normal); }
+        .console-line.warn { color: var(--color-preictal); }
+        .console-line.error { color: var(--color-seizure); }
+        .console-line.system { color: #8a6d3b; }
+
+        /* Bottom Panel - Oscilloscope Signal Canvas */
+        #bottom-panel {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+        }
+
+        .oscilloscope-container {
+            flex: 1;
+            position: relative;
+            background-color: #04080a;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .canvas-toolbar {
+            padding: 6px 12px;
+            background-color: rgba(0,0,0,0.4);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .canvas-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .canvas-btn:hover, .canvas-btn.active {
+            border-color: var(--color-normal);
+            color: var(--color-normal);
+            background: rgba(0, 200, 180, 0.05);
+        }
+
+        .canvas-label {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .canvas-label span {
+            color: var(--text-main);
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #signal-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Loading / Processing holographic overlay */
+        .hologram-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(4, 8, 10, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            z-index: 100;
+            display: none;
+        }
+
+        .holo-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid transparent;
+            border-top-color: var(--color-normal);
+            border-bottom-color: var(--color-normal);
+            border-radius: 50%;
+            animation: holo-spin 1.5s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+        }
+
+        @keyframes holo-spin {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .holo-text {
+            font-family: var(--font-display);
+            font-size: 12px;
+            letter-spacing: 3px;
+            color: var(--color-normal);
+            animation: pulse-glow 1s infinite alternate;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Header -->
+    <header>
+        <div class="header-title-group">
+            <div class="header-logo">N</div>
+            <div>
+                <h1>NEUROSCAN // RESEARCH MODULE</h1>
+                <div class="header-meta">EEG 2D-HYBRID COGNITIVE DIAGNOSTICS ENGINE</div>
+            </div>
+        </div>
+
+        <div class="api-config">
+            <div class="api-status">
+                <span class="status-dot" id="health-dot"></span>
+                <span id="health-text">OFFLINE</span>
+            </div>
+            <div class="api-input-wrapper">
+                <input type="text" id="api-url" placeholder="Backend API URL (e.g. http://localhost:5000)">
+                <button id="connect-btn">CONNECT</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dynamic Interface -->
+    <div class="workspace">
+
+        <!-- Sidebar Control Panel -->
+        <div class="panel" id="left-panel">
+            <div class="panel-header">
+                <div class="panel-title">Signal Feed & Capture</div>
+                <div class="panel-subtitle">Feed Control</div>
+            </div>
+            <div class="panel-content">
+                <!-- Drag Drop Area -->
+                <div class="upload-zone" id="drop-zone">
+                    <div class="upload-icon">⇪</div>
+                    <div class="upload-text">Upload Clinical EDF File</div>
+                    <div class="upload-sub">DRAG & DROP FILE HERE</div>
+                    <input type="file" id="file-input" style="display: none;" accept=".edf">
+                </div>
+
+                <!-- Synthetic Samples Selector -->
+                <div>
+                    <div class="demo-section-title">Synthetic Demo Targets</div>
+                    <div class="demo-buttons-grid">
+                        <button class="demo-btn normal" data-type="normal">NORMAL</button>
+                        <button class="demo-btn preictal" data-type="preictal">PREICTAL</button>
+                        <button class="demo-btn seizure" data-type="seizure">SEIZURE</button>
+                        <button class="demo-btn postictal" data-type="postictal">POSTICTAL</button>
+                    </div>
+                </div>
+
+                <!-- 22-Channel Live Activity Feed -->
+                <div>
+                    <div class="demo-section-title">22-Channel Activity Monitor</div>
+                    <div class="channel-monitor-list" id="channel-monitor">
+                        <!-- Channels injected via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Wavelet Scalogram Display -->
+        <div class="panel" id="center-panel">
+            <div class="panel-header">
+                <div class="panel-title">CWT Scalogram Resolution</div>
+                <div class="panel-subtitle">Spectrogram Visualizer</div>
+            </div>
+            
+            <!-- Viewer -->
+            <div class="scalogram-viewer">
+                <div class="hologram-overlay" id="loading-overlay">
+                    <div class="holo-spinner"></div>
+                    <div class="holo-text">PROCESSING INFERENCE...</div>
+                </div>
+
+                <div class="scalogram-img-wrapper" id="scalogram-wrapper">
+                    <img src="" alt="Continuous Wavelet Transform Scalogram" class="scalogram-img" id="scalogram-img">
+                    <div class="scan-line" id="scan-line"></div>
+                </div>
+
+                <div class="scalogram-placeholder" id="scalogram-placeholder">
+                    <div class="placeholder-icon">⌬</div>
+                    <div>LOAD SIGNAL DATA<br><span style="font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);">Awaiting EDF file upload or demo signal injection</span></div>
+                </div>
+            </div>
+
+            <!-- Footer Details -->
+            <div class="scalogram-footer">
+                <div>Wavelet: <span style="color: var(--text-main);" id="val-wavelet">-</span></div>
+                <div>Frequency Band: <span style="color: var(--text-main);" id="val-freq">-</span></div>
+                <div>Sampling Frequency: <span style="color: var(--text-main);" id="val-sfreq">-</span></div>
+            </div>
+        </div>
+
+        <!-- Right Side Stats Panel -->
+        <div class="panel" id="right-panel">
+            <div class="panel-header">
+                <div class="panel-title">Model Diagnostics</div>
+                <div class="panel-subtitle">Stats & Logs</div>
+            </div>
+            <div class="panel-content">
+                <!-- Classification Badge -->
+                <div class="classification-card">
+                    <div class="classification-badge" id="class-badge">NO DATA</div>
+                    <div class="classification-confidence" id="class-confidence">Confidence: <span>--</span></div>
+                </div>
+
+                <!-- Probability Bar Chart meters -->
+                <div class="confidence-meters-group">
+                    <!-- Normal -->
+                    <div class="confidence-row normal">
+                        <div class="confidence-meta">
+                            <span>Normal State</span>
+                            <span id="prob-val-normal">0.0%</span>
+                        </div>
+                        <div class="confidence-bar-outer">
+                            <div class="confidence-bar-inner" id="prob-bar-normal"></div>
+                        </div>
+                    </div>
+                    <!-- Preictal -->
+                    <div class="confidence-row preictal">
+                        <div class="confidence-meta">
+                            <span>Preictal (Warning)</span>
+                            <span id="prob-val-preictal">0.0%</span>
+                        </div>
+                        <div class="confidence-bar-outer">
+                            <div class="confidence-bar-inner" id="prob-bar-preictal"></div>
+                        </div>
+                    </div>
+                    <!-- Seizure -->
+                    <div class="confidence-row seizure">
+                        <div class="confidence-meta">
+                            <span>Seizure (Ictal Activity)</span>
+                            <span id="prob-val-seizure">0.0%</span>
+                        </div>
+                        <div class="confidence-bar-outer">
+                            <div class="confidence-bar-inner" id="prob-bar-seizure"></div>
+                        </div>
+                    </div>
+                    <!-- Postictal -->
+                    <div class="confidence-row postictal">
+                        <div class="confidence-meta">
+                            <span>Postictal (Recovery)</span>
+                            <span id="prob-val-postictal">0.0%</span>
+                        </div>
+                        <div class="confidence-bar-outer">
+                            <div class="confidence-bar-inner" id="prob-bar-postictal"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session Metrics -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Model Sensitivity</div>
+                        <div class="metric-value" id="metric-sens">--</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Loss Proxy</div>
+                        <div class="metric-value" id="metric-loss">--</div>
+                    </div>
+                </div>
+
+                <!-- Diagnostic Terminal Console -->
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                    <div class="demo-section-title">Diagnostic Terminal Log</div>
+                    <div class="console-log" id="console-log">
+                        <div class="console-line system">[SYS] Terminal Initialized. Awaiting link.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Waveform Oscilloscope Strip -->
+        <div class="panel" id="bottom-panel">
+            <div class="canvas-toolbar">
+                <div class="toolbar-group">
+                    <button class="canvas-btn active" id="btn-draw-normal">LINE TRACE</button>
+                    <button class="canvas-btn" id="btn-draw-glow">GLOW TRACE</button>
+                    <span class="canvas-label">Active Channel: <span id="lbl-active-ch">FP1-F7 (Replicated)</span></span>
+                </div>
+                <div class="toolbar-group">
+                    <span class="canvas-label">Resolution: <span>512 Samples (2.00s)</span></span>
+                    <span class="canvas-label">Frequency: <span>256 Hz</span></span>
+                </div>
+            </div>
+            <div class="canvas-wrapper">
+                <canvas id="signal-canvas"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Setup API URL
+        let backendUrl = window.location.origin;
+        if (backendUrl.includes('null') || backendUrl.startsWith('file://')) {
+            backendUrl = "http://localhost:5000"; // fallback for double-clicked file local loading
+        }
+        
+        const apiUrlInput = document.getElementById('api-url');
+        const connectBtn = document.getElementById('connect-btn');
+        const healthDot = document.getElementById('health-dot');
+        const healthText = document.getElementById('health-text');
+        
+        apiUrlInput.value = backendUrl;
+
+        // Diagnostic Console Logger
+        const consoleLog = document.getElementById('console-log');
+        function writeLog(text, type = 'info') {
+            const line = document.createElement('div');
+            line.classList.add('console-line', type);
+            
+            const timestamp = new Date().toLocaleTimeString();
+            line.innerText = `[${timestamp}] ${text}`;
+            consoleLog.appendChild(line);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        // Connect/Verify API Health
+        async function checkApiHealth() {
+            const targetUrl = apiUrlInput.value.trim().replace(/\/$/, "");
+            writeLog(`Pinging backend API at ${targetUrl}/api/health...`, 'info');
+            
+            try {
+                const response = await fetch(`${targetUrl}/api/health`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const status = await response.json();
+                    healthDot.className = "status-dot connected";
+                    healthText.innerText = "ONLINE";
+                    backendUrl = targetUrl;
+                    writeLog(`Connected successfully. Model loaded: ${status.model_loaded}, Model file exists: ${status.model_file_exists}`, 'success');
+                } else {
+                    throw new Error(`API health check returned status code ${response.status}`);
+                }
+            } catch (err) {
+                healthDot.className = "status-dot error";
+                healthText.innerText = "OFFLINE";
+                writeLog(`Connection failed: ${err.message}. Reverting to offline simulator.`, 'error');
+            }
+        }
+
+        connectBtn.addEventListener('click', checkApiHealth);
+
+        // 22-Channel Simulation Setup
+        const chNames = [
+            "FP1-F7", "F7-T3", "T3-T5", "T5-O1", "FP1-F3", "F3-C3", "C3-P3", "P3-O1",
+            "FP2-F8", "F8-T4", "T4-T6", "T6-O2", "FP2-F4", "F4-C4", "C4-P4", "P4-O2",
+            "FZ-CZ", "CZ-PZ", "T3-C3", "C3-CZ", "CZ-C4", "C4-T4"
+        ];
+        
+        const channelMonitor = document.getElementById('channel-monitor');
+        const channelBars = [];
+        const channelAmps = [];
+        
+        function buildChannelList() {
+            channelMonitor.innerHTML = "";
+            chNames.forEach((name, i) => {
+                const row = document.createElement('div');
+                row.className = "channel-row";
+                row.innerHTML = `
+                    <span class="channel-name">Ch ${String(i+1).padStart(2, '0')}: ${name}</span>
+                    <div class="channel-amplitude-bar-outer">
+                        <div class="channel-amplitude-bar-inner" id="ch-bar-${i}"></div>
+                    </div>
+                    <span class="channel-val" id="ch-val-${i}">0.00 µV</span>
+                `;
+                channelMonitor.appendChild(row);
+                channelBars.push(document.getElementById(`ch-bar-${i}`));
+                channelAmps.push(document.getElementById(`ch-val-${i}`));
+            });
+        }
+        buildChannelList();
+
+        // Animate 22-Channel list randomly when active
+        let liveMonitoring = true;
+        let baseChannelAmplitudes = Array(22).fill(15); // baseline amplitude
+        
+        function updateChannelMetrics() {
+            if (!liveMonitoring) return;
+            for (let i = 0; i < 22; i++) {
+                // generate fluctuation
+                const change = (Math.random() - 0.5) * 6;
+                baseChannelAmplitudes[i] = Math.max(2, Math.min(100, baseChannelAmplitudes[i] + change));
+                
+                // update UI
+                channelBars[i].style.width = `${baseChannelAmplitudes[i]}%`;
+                channelAmps[i].innerText = `${baseChannelAmplitudes[i].toFixed(2)} µV`;
+                
+                // Color scaling based on amplitude severity
+                if (baseChannelAmplitudes[i] > 75) {
+                    channelBars[i].style.backgroundColor = "var(--color-seizure)";
+                } else if (baseChannelAmplitudes[i] > 45) {
+                    channelBars[i].style.backgroundColor = "var(--color-preictal)";
+                } else {
+                    channelBars[i].style.backgroundColor = "var(--color-normal)";
+                }
+            }
+        }
+        setInterval(updateChannelMetrics, 200);
+
+        // Oscilloscope Canvas setup
+        const canvas = document.getElementById('signal-canvas');
+        const ctx = canvas.getContext('2d');
+        let currentSignal = Array(512).fill(0).map(() => (Math.random() - 0.5) * 5); // Default noise signal
+        let renderMode = 'normal'; // 'normal' or 'glow'
+        
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            drawWaveform();
+        }
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 200);
+
+        document.getElementById('btn-draw-normal').addEventListener('click', (e) => {
+            renderMode = 'normal';
+            document.getElementById('btn-draw-normal').classList.add('active');
+            document.getElementById('btn-draw-glow').classList.remove('active');
+            drawWaveform();
+        });
+
+        document.getElementById('btn-draw-glow').addEventListener('click', (e) => {
+            renderMode = 'glow';
+            document.getElementById('btn-draw-glow').classList.add('active');
+            document.getElementById('btn-draw-normal').classList.remove('active');
+            drawWaveform();
+        });
+
+        // Draw waveform onto bottom canvas
+        function drawWaveform() {
+            if (canvas.width === 0 || canvas.height === 0) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw gridlines
+            ctx.strokeStyle = '#0a1417';
+            ctx.lineWidth = 0.8;
+            
+            const gridWidth = 40;
+            for (let x = 0; x < canvas.width; x += gridWidth) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            const gridHeight = 25;
+            for (let y = 0; y < canvas.height; y += gridHeight) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw center baseline
+            ctx.strokeStyle = '#102228';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+            
+            if (!currentSignal || currentSignal.length === 0) return;
+            
+            // Auto scale amplitude to fit height
+            const maxAmp = Math.max(...currentSignal.map(Math.abs), 1.0);
+            const scaleY = (canvas.height / 2) * 0.85 / maxAmp;
+            
+            // Plot points
+            ctx.beginPath();
+            const stepX = canvas.width / (currentSignal.length - 1);
+            
+            for (let i = 0; i < currentSignal.length; i++) {
+                const x = i * stepX;
+                const y = canvas.height / 2 - currentSignal[i] * scaleY;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            
+            if (renderMode === 'glow') {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'var(--color-normal)';
+                ctx.strokeStyle = 'var(--color-normal)';
+                ctx.lineWidth = 2.0;
+            } else {
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = 'var(--color-normal)';
+                ctx.lineWidth = 1.2;
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0; // reset
+        }
+
+        // Overlay elements
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const scalogramPlaceholder = document.getElementById('scalogram-placeholder');
+        const scalogramWrapper = document.getElementById('scalogram-wrapper');
+        const scalogramImg = document.getElementById('scalogram-img');
+        const scanLine = document.getElementById('scan-line');
+
+        // Results Elements
+        const classBadge = document.getElementById('class-badge');
+        const classConfidence = document.getElementById('class-confidence').querySelector('span');
+        
+        const probBars = {
+            'Normal': document.getElementById('prob-bar-normal'),
+            'Preictal': document.getElementById('prob-bar-preictal'),
+            'Seizure': document.getElementById('prob-bar-seizure'),
+            'Postictal': document.getElementById('prob-bar-postictal')
+        };
+        const probVals = {
+            'Normal': document.getElementById('prob-val-normal'),
+            'Preictal': document.getElementById('prob-val-preictal'),
+            'Seizure': document.getElementById('prob-val-seizure'),
+            'Postictal': document.getElementById('prob-val-postictal')
+        };
+
+        const metricSens = document.getElementById('metric-sens');
+        const metricLoss = document.getElementById('metric-loss');
+        
+        const valWavelet = document.getElementById('val-wavelet');
+        const valFreq = document.getElementById('val-freq');
+        const valSfreq = document.getElementById('val-sfreq');
+
+        function updateResultsUI(data) {
+            // Update class badge
+            const label = data.predicted_label;
+            classBadge.innerText = label;
+            classBadge.className = `classification-badge ${label.toLowerCase()}`;
+            classConfidence.innerText = `${data.confidence}%`;
+            
+            // Update progress bars
+            for (const [key, val] of Object.entries(data.probabilities)) {
+                if (probBars[key]) {
+                    probBars[key].style.width = `${val}%`;
+                    probVals[key].innerText = `${val.toFixed(1)}%`;
+                }
+            }
+
+            // Update parameters footer
+            valWavelet.innerText = "cmor1.5-1.0";
+            valFreq.innerText = "1 - 50 Hz";
+            valSfreq.innerText = "256 Hz";
+            
+            // Update cards
+            metricSens.innerText = `${data.session_metrics.sensitivity.toFixed(2)}%`;
+            metricLoss.innerText = data.session_metrics.loss.toFixed(4);
+
+            // Update dynamic channel monitor amplitudes based on state
+            let scaleFactor = 10;
+            if (label === 'Seizure') scaleFactor = 85;
+            else if (label === 'Preictal') scaleFactor = 50;
+            else if (label === 'Postictal') scaleFactor = 30;
+            else scaleFactor = 15;
+
+            for (let i = 0; i < 22; i++) {
+                baseChannelAmplitudes[i] = scaleFactor + (Math.random() * scaleFactor * 0.3);
+            }
+            liveMonitoring = false; // pause random baseline fluctuation
+            setTimeout(() => { liveMonitoring = true; }, 4000); // resume fluctuation after 4s
+            
+            // Render Waveform Canvas
+            if (data.display_signal) {
+                currentSignal = data.display_signal;
+                drawWaveform();
+            }
+
+            // Render CWT Image
+            if (data.cwt_image_b64) {
+                scalogramPlaceholder.style.display = 'none';
+                scalogramWrapper.style.display = 'block';
+                scalogramImg.src = `data:image/png;base64,${data.cwt_image_b64}`;
+                scanLine.style.display = 'block';
+            }
+            
+            writeLog(`Inference completed. State: ${label} (Confidence: ${data.confidence}%)`, 'success');
+        }
+
+        // Trigger Inference via API
+        async function runPredict(payload, isJson = true) {
+            loadingOverlay.style.display = 'flex';
+            const start = performance.now();
+            writeLog(`Triggering inference request to ${backendUrl}/api/predict...`, 'info');
+
+            try {
+                let options = {
+                    method: 'POST',
+                    headers: isJson ? { 'Content-Type': 'application/json' } : undefined,
+                    body: isJson ? JSON.stringify(payload) : payload
+                };
+
+                const res = await fetch(`${backendUrl}/api/predict`, options);
+                const duration = ((performance.now() - start) / 1000).toFixed(2);
+
+                if (!res.ok) {
+                    const errObj = await res.json().catch(() => ({}));
+                    throw new Error(errObj.error || `HTTP error status ${res.status}`);
+                }
+
+                const data = await res.json();
+                writeLog(`Inference Response received in ${duration} seconds.`, 'success');
+                updateResultsUI(data);
+
+            } catch (err) {
+                writeLog(`Inference failure: ${err.message}`, 'error');
+                alert(`Error: ${err.message}`);
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        // Upload EDF File Events
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                handleEdfUpload(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleEdfUpload(e.target.files[0]);
+            }
+        });
+
+        function handleEdfUpload(file) {
+            if (!file.name.toLowerCase().endsWith('.edf')) {
+                writeLog(`File upload rejected: ${file.name} is not an EDF file.`, 'error');
+                alert("Only .edf files are accepted.");
+                return;
+            }
+            
+            writeLog(`Loading EDF File: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'info');
+            
+            const formData = new FormData();
+            formData.append('edf_file', file);
+            
+            runPredict(formData, false);
+        }
+
+        // Demo Selector Buttons
+        document.querySelectorAll('.demo-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const type = e.target.getAttribute('data-type');
+                writeLog(`Requesting synthetic demo signal pattern for: ${type}`, 'info');
+                
+                try {
+                    const response = await fetch(`${backendUrl}/api/demo-signal/${type}`);
+                    if (!response.ok) {
+                        throw new Error(`Demo signal fetch failed with status ${response.status}`);
+                    }
+                    const data = await response.json();
+                    
+                    // The backend returns a { signal: [float] } object.
+                    // We feed this directly back into /api/predict to execute full hybrid analysis.
+                    writeLog(`Synthetic data loaded (${data.signal.length} points). Uploading to model backend...`, 'info');
+                    runPredict({ signal: data.signal }, true);
+
+                } catch (err) {
+                    writeLog(`Demo pattern failed: ${err.message}`, 'error');
+                    alert(`Demo failed: ${err.message}`);
+                }
+            });
+        });
+
+        // Initialize check on load
+        window.addEventListener('DOMContentLoaded', () => {
+            checkApiHealth();
+        });
+
+    </script>
+</body>
+</html>
