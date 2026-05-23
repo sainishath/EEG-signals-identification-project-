@@ -178,5 +178,33 @@ def main():
     print(f"Metadata saved to: {METADATA_FILE}")
     print(f"=======================================================")
 
+def extract_cwt_features(signal_2d: np.ndarray) -> np.ndarray:
+    """
+    Stage 2: Feature Engineering - Computes CWT for a 22-channel EEG signal.
+    Input: (22, 512)
+    Output: (22, 50, 512)
+    """
+    import pywt
+    SFREQ = 256
+    FREQS = np.arange(1, 51)
+    WAVELET = 'cmor1.5-1.0'
+    SCALES = pywt.scale2frequency(WAVELET, FREQS) / (1/SFREQ)
+    
+    TARGET_T = 512
+    CHANNELS = 22
+    out = np.zeros((CHANNELS, 50, TARGET_T), dtype=np.float32)
+    
+    for ch in range(CHANNELS):
+        sig = signal_2d[ch]
+        if len(sig) >= TARGET_T:
+            sig = sig[:TARGET_T]
+        else:
+            sig = np.pad(sig, (0, TARGET_T - len(sig)))
+        
+        coeffs, _ = pywt.cwt(sig, SCALES, WAVELET, 1/SFREQ)
+        out[ch] = np.abs(coeffs).astype(np.float32)
+        
+    return out
+
 if __name__ == "__main__":
     main()

@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NeuroScan // EEG Diagnostic Terminal</title>
+    <title>NeuroScan // EEG Clinical Portal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=Inter:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-deep: #070c0e;
-            --bg-card: #0c1417;
-            --bg-card-hover: #121e22;
-            --border-color: #1a2c31;
+            --bg-deep: #060a0c;
+            --bg-card: #0b1114;
+            --bg-card-hover: #111a1e;
+            --border-color: #17242a;
             --border-glow: rgba(0, 200, 180, 0.15);
             
             /* State Colors */
@@ -22,7 +22,7 @@
             --color-postictal: #af52de;
             
             --text-main: #e2edf2;
-            --text-muted: #6b8a96;
+            --text-muted: #5e7a85;
             --accent-glow: 0 0 15px rgba(0, 200, 180, 0.25);
             --font-display: 'Orbitron', sans-serif;
             --font-mono: 'IBM Plex Mono', monospace;
@@ -61,6 +61,123 @@
             background: var(--color-normal);
         }
 
+        /* Login Overlay */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-deep);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 40px;
+            width: 440px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .login-header {
+            text-align: center;
+        }
+
+        .login-logo {
+            width: 48px;
+            height: 48px;
+            background: radial-gradient(circle, var(--color-normal) 20%, transparent 70%);
+            border: 2px solid var(--color-normal);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 900;
+            font-size: 20px;
+            color: var(--color-normal);
+            box-shadow: var(--accent-glow);
+            margin-bottom: 16px;
+        }
+
+        .login-title {
+            font-family: var(--font-display);
+            font-size: 20px;
+            letter-spacing: 2px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .login-subtitle {
+            font-size: 11px;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-family: var(--font-display);
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+
+        .form-group input {
+            background-color: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--color-normal);
+        }
+
+        .login-btn {
+            background-color: var(--color-normal);
+            color: #000;
+            border: none;
+            padding: 14px;
+            border-radius: 4px;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            opacity: 0.9;
+        }
+
+        .login-error {
+            color: var(--color-seizure);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            text-align: center;
+            display: none;
+        }
+
         /* Header */
         header {
             background-color: var(--bg-card);
@@ -93,12 +210,6 @@
             font-size: 14px;
             color: var(--color-normal);
             box-shadow: var(--accent-glow);
-            animation: pulse-glow 2s infinite alternate;
-        }
-
-        @keyframes pulse-glow {
-            from { box-shadow: 0 0 5px rgba(0, 200, 180, 0.2); }
-            to { box-shadow: 0 0 15px rgba(0, 200, 180, 0.6); }
         }
 
         h1 {
@@ -106,7 +217,6 @@
             font-size: 18px;
             letter-spacing: 2px;
             font-weight: 700;
-            text-shadow: 0 0 10px rgba(226, 237, 242, 0.1);
         }
 
         .header-meta {
@@ -117,78 +227,51 @@
             padding-left: 15px;
         }
 
-        .api-config {
+        .header-controls {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 16px;
         }
 
-        .api-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .clinician-badge {
             font-family: var(--font-mono);
             font-size: 11px;
             background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
             padding: 6px 12px;
             border-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--text-muted);
-            box-shadow: 0 0 8px currentColor;
-        }
-
-        .status-dot.connected {
-            background-color: var(--color-normal);
-            color: var(--color-normal);
-        }
-
-        .status-dot.error {
-            background-color: var(--color-seizure);
-            color: var(--color-seizure);
-        }
-
-        .api-input-wrapper {
             display: flex;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            overflow: hidden;
-            background: #000;
+            align-items: center;
+            gap: 8px;
         }
 
-        .api-input-wrapper input {
+        .clinician-dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--color-normal);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--color-normal);
+        }
+
+        .logout-btn {
             background: transparent;
-            border: none;
-            color: var(--text-main);
-            font-family: var(--font-mono);
-            font-size: 12px;
-            padding: 6px 12px;
-            width: 240px;
-            outline: none;
-        }
-
-        .api-input-wrapper button {
-            background: var(--border-color);
-            border: none;
-            color: var(--text-main);
-            padding: 6px 12px;
+            border: 1px solid var(--color-seizure);
+            color: var(--color-seizure);
             font-family: var(--font-display);
-            font-size: 10px;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .api-input-wrapper button:hover {
-            background: var(--color-normal);
+        .logout-btn:hover {
+            background-color: var(--color-seizure);
             color: #000;
         }
 
-        /* Main Workspace Layout */
+        /* Workspace Grid Layout */
         .workspace {
             flex: 1;
             display: grid;
@@ -197,7 +280,6 @@
             gap: 15px;
             padding: 15px;
             height: calc(100vh - 60px);
-            background-color: var(--bg-deep);
         }
 
         /* Panels Container */
@@ -208,7 +290,6 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            position: relative;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
@@ -223,16 +304,15 @@
 
         .panel-title {
             font-family: var(--font-display);
-            font-size: 12px;
+            font-size: 11px;
             letter-spacing: 1.5px;
             font-weight: 700;
-            color: var(--text-main);
             text-transform: uppercase;
         }
 
         .panel-subtitle {
             font-family: var(--font-mono);
-            font-size: 10px;
+            font-size: 9px;
             color: var(--text-muted);
         }
 
@@ -245,15 +325,43 @@
             gap: 16px;
         }
 
-        /* Left Panel - Control & Feed */
+        /* Left Side Control Panel */
         #left-panel {
             grid-row: 1 / 3;
+        }
+
+        .input-card {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-card label {
+            font-family: var(--font-display);
+            font-size: 9px;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .input-card input {
+            background-color: #000;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            border-radius: 4px;
+            outline: none;
         }
 
         .upload-zone {
             border: 2px dashed var(--border-color);
             border-radius: 6px;
-            padding: 24px 16px;
+            padding: 20px 16px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
@@ -261,42 +369,27 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .upload-zone:hover, .upload-zone.dragover {
             border-color: var(--color-normal);
-            background: rgba(0, 200, 180, 0.05);
-            box-shadow: inset 0 0 10px rgba(0, 200, 180, 0.05);
+            background: rgba(0, 200, 180, 0.03);
         }
 
         .upload-icon {
-            font-size: 24px;
+            font-size: 20px;
             color: var(--text-muted);
-            transition: color 0.3s;
-        }
-
-        .upload-zone:hover .upload-icon {
-            color: var(--color-normal);
         }
 
         .upload-text {
-            font-size: 12px;
-            color: var(--text-main);
+            font-size: 11px;
         }
 
         .upload-sub {
-            font-size: 10px;
+            font-size: 9px;
             color: var(--text-muted);
             font-family: var(--font-mono);
-        }
-
-        .demo-section-title {
-            font-family: var(--font-display);
-            font-size: 11px;
-            color: var(--text-muted);
-            letter-spacing: 1px;
-            margin-bottom: 8px;
         }
 
         .demo-buttons-grid {
@@ -306,10 +399,10 @@
         }
 
         .demo-btn {
-            background-color: rgba(26, 44, 49, 0.2);
+            background-color: rgba(26, 44, 49, 0.15);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            padding: 10px 8px;
+            padding: 8px;
             font-family: var(--font-mono);
             font-size: 11px;
             border-radius: 4px;
@@ -323,8 +416,8 @@
 
         .demo-btn::before {
             content: '';
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
             background-color: currentColor;
         }
@@ -337,20 +430,19 @@
         .demo-btn:hover {
             background-color: var(--bg-card-hover);
             border-color: currentColor;
-            box-shadow: 0 0 10px rgba(currentcolor, 0.15);
         }
 
         .channel-monitor-list {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 4px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
             background-color: rgba(0, 0, 0, 0.3);
             border-radius: 4px;
-            padding: 8px;
-            max-height: 280px;
+            padding: 6px;
+            max-height: 250px;
         }
 
         .channel-row {
@@ -358,11 +450,10 @@
             align-items: center;
             justify-content: space-between;
             font-family: var(--font-mono);
-            font-size: 10px;
-            padding: 4px 6px;
-            background: rgba(25, 40, 45, 0.15);
+            font-size: 9px;
+            padding: 3px 5px;
+            background: rgba(25, 40, 45, 0.1);
             border-radius: 2px;
-            border: 1px solid transparent;
         }
 
         .channel-name {
@@ -370,12 +461,11 @@
         }
 
         .channel-amplitude-bar-outer {
-            width: 120px;
-            height: 6px;
+            width: 110px;
+            height: 5px;
             background-color: rgba(0,0,0,0.4);
             border-radius: 3px;
             overflow: hidden;
-            position: relative;
         }
 
         .channel-amplitude-bar-inner {
@@ -386,41 +476,118 @@
         }
 
         .channel-val {
-            min-width: 45px;
+            min-width: 40px;
             text-align: right;
-            color: var(--text-main);
         }
 
-        /* Center Panel - CWT Scalogram */
+        /* Center Panel - Dual Scalogram Spectrogram Viewer */
         #center-panel {
             grid-column: 2 / 3;
             grid-row: 1 / 2;
         }
 
-        .scalogram-viewer {
+        .center-viewer-grid {
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 15px;
+            background-color: #030608;
+            overflow-y: auto;
+        }
+
+        /* Seizure Alarm Banner */
+        .seizure-banner {
+            border-radius: 4px;
+            padding: 12px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            text-align: center;
+            display: none;
+            transition: all 0.3s;
+        }
+
+        .seizure-banner.alarm {
+            background-color: rgba(255, 59, 48, 0.15);
+            border: 2px solid var(--color-seizure);
+            box-shadow: 0 0 20px rgba(255, 59, 48, 0.25);
+            display: flex;
+            animation: banner-flash 1.5s infinite alternate;
+        }
+
+        .seizure-banner.clean {
+            background-color: rgba(0, 200, 180, 0.08);
+            border: 1px solid var(--color-normal);
+            display: flex;
+        }
+
+        .seizure-banner h2 {
+            font-family: var(--font-display);
+            font-size: 16px;
+            letter-spacing: 2px;
+            font-weight: 900;
+        }
+
+        .seizure-banner p {
+            font-size: 11px;
+            font-family: var(--font-mono);
+        }
+
+        .seizure-banner.alarm h2 { color: var(--color-seizure); }
+        .seizure-banner.alarm p { color: #ff8882; }
+        .seizure-banner.clean h2 { color: var(--color-normal); }
+        .seizure-banner.clean p { color: #8ceae0; }
+
+        @keyframes banner-flash {
+            0% { box-shadow: 0 0 10px rgba(255, 59, 48, 0.2); border-color: rgba(255, 59, 48, 0.5); }
+            100% { box-shadow: 0 0 25px rgba(255, 59, 48, 0.6); border-color: var(--color-seizure); }
+        }
+
+        /* Dual Scalogram Grid */
+        .scalograms-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            min-height: 250px;
+        }
+
+        .scalogram-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .scalogram-card-header {
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid var(--border-color);
+            font-family: var(--font-display);
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .scalogram-viewer-panel {
+            flex: 1;
+            background-color: #000;
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #04080a;
             position: relative;
             overflow: hidden;
-            border-radius: 4px;
-            border: 1px solid rgba(0, 0, 0, 0.5);
-        }
-
-        .scalogram-img-wrapper {
-            position: relative;
-            max-width: 96%;
-            max-height: 96%;
-            display: none;
         }
 
         .scalogram-img {
-            width: 100%;
-            height: auto;
-            border-radius: 2px;
-            display: block;
+            max-width: 98%;
+            max-height: 98%;
+            display: none;
         }
 
         .scan-line {
@@ -430,8 +597,8 @@
             width: 100%;
             height: 2px;
             background: linear-gradient(to bottom, transparent, var(--color-normal), transparent);
-            box-shadow: 0 0 10px var(--color-normal);
-            animation: scan 3s infinite linear;
+            box-shadow: 0 0 8px var(--color-normal);
+            animation: scan 2.5s infinite linear;
             pointer-events: none;
             display: none;
         }
@@ -442,119 +609,50 @@
             100% { top: 0%; }
         }
 
-        .scalogram-placeholder {
+        .scalogram-card.scalo2 .scan-line {
+            background: linear-gradient(to bottom, transparent, var(--color-preictal), transparent);
+            box-shadow: 0 0 8px var(--color-preictal);
+        }
+
+        .scalogram-placeholder-micro {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             color: var(--text-muted);
-            text-align: center;
-            padding: 24px;
-        }
-
-        .placeholder-icon {
-            font-family: var(--font-display);
-            font-size: 32px;
-            font-weight: 700;
-            animation: breathe 3s infinite alternate;
-        }
-
-        @keyframes breathe {
-            from { opacity: 0.2; transform: scale(0.95); }
-            to { opacity: 0.8; transform: scale(1.05); }
-        }
-
-        .scalogram-footer {
-            padding: 10px 16px;
-            background: rgba(0, 0, 0, 0.2);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
+            font-size: 10px;
             font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--text-muted);
+            text-align: center;
         }
 
-        /* Right Panel - Results & Diagnostic Logs */
+        .placeholder-icon-micro {
+            font-size: 24px;
+        }
+
+        /* Right Panel - Stats, Report Box & Logs */
         #right-panel {
             grid-column: 3 / 4;
             grid-row: 1 / 3;
         }
 
-        .classification-card {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            position: relative;
-            overflow: hidden;
-        }
-
         .classification-badge {
             font-family: var(--font-display);
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 900;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
-            padding: 6px 20px;
+            text-align: center;
+            padding: 8px;
             border-radius: 4px;
-            background: rgba(0,0,0,0.6);
             border: 2px solid var(--text-muted);
             color: var(--text-muted);
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            transition: all 0.3s;
         }
 
-        .classification-badge.normal {
-            border-color: var(--color-normal);
-            color: var(--color-normal);
-            box-shadow: 0 0 15px rgba(0, 200, 180, 0.25);
-        }
-
-        .classification-badge.preictal {
-            border-color: var(--color-preictal);
-            color: var(--color-preictal);
-            box-shadow: 0 0 15px rgba(245, 166, 35, 0.25);
-        }
-
-        .classification-badge.seizure {
-            border-color: var(--color-seizure);
-            color: var(--color-seizure);
-            box-shadow: 0 0 20px rgba(255, 59, 48, 0.4);
-            animation: alert-flash 1s infinite alternate;
-        }
-
-        @keyframes alert-flash {
-            0% { box-shadow: 0 0 10px rgba(255, 59, 48, 0.2); }
-            100% { box-shadow: 0 0 25px rgba(255, 59, 48, 0.7); border-color: #ff5e55; }
-        }
-
-        .classification-badge.postictal {
-            border-color: var(--color-postictal);
-            color: var(--color-postictal);
-            box-shadow: 0 0 15px rgba(175, 82, 222, 0.25);
-        }
-
-        .classification-confidence {
-            font-family: var(--font-mono);
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .classification-confidence span {
-            font-weight: 600;
-            color: var(--text-main);
-        }
-
-        .confidence-meters-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
+        .classification-badge.normal { border-color: var(--color-normal); color: var(--color-normal); box-shadow: 0 0 12px rgba(0, 200, 180, 0.2); }
+        .classification-badge.preictal { border-color: var(--color-preictal); color: var(--color-preictal); box-shadow: 0 0 12px rgba(245, 166, 35, 0.2); }
+        .classification-badge.seizure { border-color: var(--color-seizure); color: var(--color-seizure); box-shadow: 0 0 15px rgba(255, 59, 48, 0.35); }
+        .classification-badge.postictal { border-color: var(--color-postictal); color: var(--color-postictal); box-shadow: 0 0 12px rgba(175, 82, 222, 0.2); }
 
         .confidence-row {
             display: flex;
@@ -566,23 +664,23 @@
             display: flex;
             justify-content: space-between;
             font-family: var(--font-mono);
-            font-size: 11px;
+            font-size: 10px;
         }
 
         .confidence-bar-outer {
             width: 100%;
-            height: 10px;
+            height: 8px;
             background-color: rgba(0, 0, 0, 0.5);
             border: 1px solid var(--border-color);
-            border-radius: 5px;
+            border-radius: 4px;
             overflow: hidden;
         }
 
         .confidence-bar-inner {
             height: 100%;
             width: 0%;
-            border-radius: 4px;
-            transition: width 0.8s cubic-bezier(0.1, 0.8, 0.3, 1);
+            border-radius: 3px;
+            transition: width 0.6s cubic-bezier(0.1, 0.8, 0.3, 1);
         }
 
         .confidence-row.normal .confidence-bar-inner { background-color: var(--color-normal); }
@@ -590,68 +688,134 @@
         .confidence-row.seizure .confidence-bar-inner { background-color: var(--color-seizure); }
         .confidence-row.postictal .confidence-bar-inner { background-color: var(--color-postictal); }
 
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .metric-card {
-            background-color: rgba(0, 0, 0, 0.2);
+        /* Medical Notes Box and Edit/Sign workflow */
+        .medical-notes-panel {
+            background-color: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 10px;
+            border-radius: 6px;
+            padding: 14px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 12px;
+            flex: 1;
+            min-height: 220px;
         }
 
-        .metric-label {
+        .medical-notes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .medical-notes-body {
+            flex: 1;
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            line-height: 1.4;
+            color: #b5cdd8;
+            background: #030608;
+            border: 1px solid rgba(23, 36, 42, 0.6);
+            border-radius: 4px;
+            padding: 10px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            position: relative;
+        }
+
+        .notes-textarea {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            color: #b5cdd8;
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            line-height: 1.4;
+            resize: none;
+            outline: none;
+            display: none;
+        }
+
+        .signature-strip {
+            display: none;
+            font-family: var(--font-mono);
+            font-size: 9.5px;
+            color: var(--color-normal);
+            border-top: 1px dashed rgba(0, 200, 180, 0.3);
+            padding-top: 8px;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        .notes-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .notes-btn {
+            background: rgba(23, 36, 42, 0.4);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
             font-family: var(--font-display);
             font-size: 9px;
-            color: var(--text-muted);
-            text-transform: uppercase;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
-        .metric-value {
-            font-family: var(--font-mono);
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-main);
+        .notes-btn:hover {
+            border-color: var(--color-normal);
+            background-color: rgba(0, 200, 180, 0.05);
+        }
+
+        .notes-btn.sign-btn {
+            border-color: var(--color-normal);
+            color: var(--color-normal);
+        }
+
+        .notes-btn.sign-btn:hover {
+            background-color: var(--color-normal);
+            color: #000;
+        }
+
+        .notes-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-color: var(--border-color) !important;
+            background-color: transparent !important;
+            color: var(--text-muted) !important;
         }
 
         .console-log {
-            flex: 1;
-            background-color: #04080a;
+            background-color: #030608;
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            padding: 10px;
+            padding: 8px;
             font-family: var(--font-mono);
-            font-size: 10px;
-            color: #92b5c2;
+            font-size: 9px;
+            color: #7b9aa6;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            max-height: 220px;
-        }
-
-        .console-log::-webkit-scrollbar {
-            width: 4px;
+            gap: 3px;
+            max-height: 120px;
         }
 
         .console-line {
-            line-height: 1.4;
+            line-height: 1.3;
             white-space: pre-wrap;
         }
-
-        .console-line.info { color: #5bc0de; }
+        .console-line.info { color: #4faac6; }
         .console-line.success { color: var(--color-normal); }
         .console-line.warn { color: var(--color-preictal); }
         .console-line.error { color: var(--color-seizure); }
-        .console-line.system { color: #8a6d3b; }
 
-        /* Bottom Panel - Oscilloscope Signal Canvas */
+        /* Bottom Panel - 1D EEG Preview */
         #bottom-panel {
             grid-column: 2 / 3;
             grid-row: 2 / 3;
@@ -660,7 +824,7 @@
         .oscilloscope-container {
             flex: 1;
             position: relative;
-            background-color: #04080a;
+            background-color: #030608;
             border-radius: 4px;
             overflow: hidden;
             display: flex;
@@ -676,33 +840,9 @@
             align-items: center;
         }
 
-        .toolbar-group {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .canvas-btn {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            font-family: var(--font-mono);
-            font-size: 10px;
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .canvas-btn:hover, .canvas-btn.active {
-            border-color: var(--color-normal);
-            color: var(--color-normal);
-            background: rgba(0, 200, 180, 0.05);
-        }
-
         .canvas-label {
             font-family: var(--font-mono);
-            font-size: 10px;
+            font-size: 9.5px;
             color: var(--text-muted);
         }
 
@@ -724,93 +864,125 @@
             display: block;
         }
 
-        /* Loading / Processing holographic overlay */
+        /* Loading holographic overlay */
         .hologram-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(4, 8, 10, 0.85);
+            background: rgba(3, 6, 8, 0.85);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 15px;
+            gap: 12px;
             z-index: 100;
             display: none;
         }
 
         .holo-spinner {
-            width: 50px;
-            height: 50px;
+            width: 44px;
+            height: 44px;
             border: 3px solid transparent;
             border-top-color: var(--color-normal);
             border-bottom-color: var(--color-normal);
             border-radius: 50%;
-            animation: holo-spin 1.5s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+            animation: holo-spin 1.2s linear infinite;
         }
 
         @keyframes holo-spin {
-            0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(180deg) scale(1.1); }
-            100% { transform: rotate(360deg) scale(1); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .holo-text {
             font-family: var(--font-display);
-            font-size: 12px;
-            letter-spacing: 3px;
+            font-size: 11px;
+            letter-spacing: 2px;
             color: var(--color-normal);
             animation: pulse-glow 1s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from { opacity: 0.4; }
+            to { opacity: 1; }
         }
     </style>
 </head>
 <body>
+
+    <!-- Holographic Login Cover Overlay -->
+    <div id="login-overlay">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">N</div>
+                <h2 class="login-title">NEUROSCAN PORTAL</h2>
+                <p class="login-subtitle">CLINICAL CLINICAL AUTHENTICATION GATEWAY</p>
+            </div>
+            
+            <div class="form-group">
+                <label>PRACTICE ID</label>
+                <input type="text" id="login-pid" placeholder="e.g. DEMO_CLINIC" value="DEMO_CLINIC">
+            </div>
+
+            <div class="form-group">
+                <label>ACCESS KEY</label>
+                <input type="password" id="login-key" placeholder="e.g. NS2026" value="NS2026">
+            </div>
+
+            <div class="login-error" id="login-error-msg">INVALID PRACTICE ID OR ACCESS KEY</div>
+
+            <button class="login-btn" id="login-submit-btn">AUTHENTICATE SYSTEM</button>
+        </div>
+    </div>
 
     <!-- Top Navigation Header -->
     <header>
         <div class="header-title-group">
             <div class="header-logo">N</div>
             <div>
-                <h1>NEUROSCAN // RESEARCH MODULE</h1>
-                <div class="header-meta">EEG 2D-HYBRID COGNITIVE DIAGNOSTICS ENGINE</div>
+                <h1>NEUROSCAN // CLINICAL TERMINAL</h1>
+                <div class="header-meta">EEG CNN-TRANSFORMER SEIZURE DETECTION INTERFACE</div>
             </div>
         </div>
 
-        <div class="api-config">
-            <div class="api-status">
-                <span class="status-dot" id="health-dot"></span>
-                <span id="health-text">OFFLINE</span>
+        <div class="header-controls">
+            <div class="clinician-badge">
+                <span class="clinician-dot"></span>
+                <span id="clinician-name">Awaiting Auth</span>
             </div>
-            <div class="api-input-wrapper">
-                <input type="text" id="api-url" placeholder="Backend API URL (e.g. http://localhost:5000)">
-                <button id="connect-btn">CONNECT</button>
-            </div>
+            <button class="logout-btn" id="logout-btn">LOGOUT</button>
         </div>
     </header>
 
-    <!-- Main Dynamic Interface -->
+    <!-- Main Workspace Layout -->
     <div class="workspace">
 
         <!-- Sidebar Control Panel -->
         <div class="panel" id="left-panel">
             <div class="panel-header">
-                <div class="panel-title">Signal Feed & Capture</div>
-                <div class="panel-subtitle">Feed Control</div>
+                <div class="panel-title">Data Ingestion Feed</div>
+                <div class="panel-subtitle">Stage 1.1 - 1.2</div>
             </div>
             <div class="panel-content">
+                <!-- Patient ID Input -->
+                <div class="input-card">
+                    <label>Patient Registry ID</label>
+                    <input type="text" id="patient-id-input" placeholder="e.g. chb01_03" value="chb01_03">
+                </div>
+
                 <!-- Drag Drop Area -->
                 <div class="upload-zone" id="drop-zone">
                     <div class="upload-icon">⇪</div>
-                    <div class="upload-text">Upload Clinical EDF File</div>
-                    <div class="upload-sub">DRAG & DROP FILE HERE</div>
-                    <input type="file" id="file-input" style="display: none;" accept=".edf">
+                    <div class="upload-text">Upload Bio-Signal File</div>
+                    <div class="upload-sub">EDF / CSV / TXT SUPPORTED</div>
+                    <input type="file" id="file-input" style="display: none;" accept=".edf,.csv,.txt">
                 </div>
 
                 <!-- Synthetic Samples Selector -->
                 <div>
-                    <div class="demo-section-title">Synthetic Demo Targets</div>
+                    <div class="demo-section-title">Trigger Demo Signal Waveforms</div>
                     <div class="demo-buttons-grid">
                         <button class="demo-btn normal" data-type="normal">NORMAL</button>
                         <button class="demo-btn preictal" data-type="preictal">PREICTAL</button>
@@ -829,50 +1001,71 @@
             </div>
         </div>
 
-        <!-- Center Wavelet Scalogram Display -->
+        <!-- Center Spectrogram Displays -->
         <div class="panel" id="center-panel">
             <div class="panel-header">
-                <div class="panel-title">CWT Scalogram Resolution</div>
-                <div class="panel-subtitle">Spectrogram Visualizer</div>
+                <div class="panel-title">Stage 2: Spectrogram CWT Features</div>
+                <div class="panel-subtitle">Frequency-Time Transforms</div>
             </div>
             
-            <!-- Viewer -->
-            <div class="scalogram-viewer">
-                <div class="hologram-overlay" id="loading-overlay">
-                    <div class="holo-spinner"></div>
-                    <div class="holo-text">PROCESSING INFERENCE...</div>
+            <div class="center-viewer-grid">
+                <!-- Seizure Alert Banner -->
+                <div class="seizure-banner" id="seizure-alert-banner">
+                    <h2 id="banner-alert-title">🚨 SEIZURE DETECTED! 🚨</h2>
+                    <p id="banner-alert-sub">Attending Clinician alert active. Immediate intervention advised.</p>
                 </div>
 
-                <div class="scalogram-img-wrapper" id="scalogram-wrapper">
-                    <img src="" alt="Continuous Wavelet Transform Scalogram" class="scalogram-img" id="scalogram-img">
-                    <div class="scan-line" id="scan-line"></div>
-                </div>
+                <!-- Dual CWT Spectrogram Panels -->
+                <div class="scalograms-container">
+                    <!-- Scalogram 1 -->
+                    <div class="scalogram-card scalo1">
+                        <div class="scalogram-card-header">CWT Spectrogram 1 (Channel FP1-F7)</div>
+                        <div class="scalogram-viewer-panel" id="scalo-panel-1">
+                            <div class="hologram-overlay" id="loading-overlay-1">
+                                <div class="holo-spinner"></div>
+                                <div class="holo-text">PROCESSING INFERENCE...</div>
+                            </div>
+                            <img src="" alt="CWT Scalogram 1" class="scalogram-img" id="scalo-img-1">
+                            <div class="scan-line" id="scan-line-1"></div>
+                            
+                            <div class="scalogram-placeholder-micro" id="scalo-placeholder-1">
+                                <div class="placeholder-icon-micro">⌬</div>
+                                <div>Awaiting FP1-F7 Wavelet Transform</div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="scalogram-placeholder" id="scalogram-placeholder">
-                    <div class="placeholder-icon">⌬</div>
-                    <div>LOAD SIGNAL DATA<br><span style="font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);">Awaiting EDF file upload or demo signal injection</span></div>
-                </div>
-            </div>
+                    <!-- Scalogram 2 -->
+                    <div class="scalogram-card scalo2">
+                        <div class="scalogram-card-header">CWT Spectrogram 2 (Channel C3-P3)</div>
+                        <div class="scalogram-viewer-panel" id="scalo-panel-2">
+                            <div class="hologram-overlay" id="loading-overlay-2">
+                                <div class="holo-spinner"></div>
+                                <div class="holo-text">PROCESSING INFERENCE...</div>
+                            </div>
+                            <img src="" alt="CWT Scalogram 2" class="scalogram-img" id="scalo-img-2">
+                            <div class="scan-line" id="scan-line-2"></div>
 
-            <!-- Footer Details -->
-            <div class="scalogram-footer">
-                <div>Wavelet: <span style="color: var(--text-main);" id="val-wavelet">-</span></div>
-                <div>Frequency Band: <span style="color: var(--text-main);" id="val-freq">-</span></div>
-                <div>Sampling Frequency: <span style="color: var(--text-main);" id="val-sfreq">-</span></div>
+                            <div class="scalogram-placeholder-micro" id="scalo-placeholder-2">
+                                <div class="placeholder-icon-micro">⌬</div>
+                                <div>Awaiting C3-P3 Wavelet Transform</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Right Side Stats Panel -->
         <div class="panel" id="right-panel">
             <div class="panel-header">
-                <div class="panel-title">Model Diagnostics</div>
-                <div class="panel-subtitle">Stats & Logs</div>
+                <div class="panel-title">Diagnosis & Classification</div>
+                <div class="panel-subtitle">Stage 3 - 4.1</div>
             </div>
             <div class="panel-content">
                 <!-- Classification Badge -->
-                <div class="classification-card">
-                    <div class="classification-badge" id="class-badge">NO DATA</div>
-                    <div class="classification-confidence" id="class-confidence">Confidence: <span>--</span></div>
+                <div class="confidence-row" style="gap: 10px;">
+                    <div class="classification-badge" id="class-badge">NO EEG DATA</div>
                 </div>
 
                 <!-- Probability Bar Chart meters -->
@@ -880,7 +1073,7 @@
                     <!-- Normal -->
                     <div class="confidence-row normal">
                         <div class="confidence-meta">
-                            <span>Normal State</span>
+                            <span>Normal Cortical State</span>
                             <span id="prob-val-normal">0.0%</span>
                         </div>
                         <div class="confidence-bar-outer">
@@ -890,7 +1083,7 @@
                     <!-- Preictal -->
                     <div class="confidence-row preictal">
                         <div class="confidence-meta">
-                            <span>Preictal (Warning)</span>
+                            <span>Pre-Ictal Warning Phase</span>
                             <span id="prob-val-preictal">0.0%</span>
                         </div>
                         <div class="confidence-bar-outer">
@@ -910,7 +1103,7 @@
                     <!-- Postictal -->
                     <div class="confidence-row postictal">
                         <div class="confidence-meta">
-                            <span>Postictal (Recovery)</span>
+                            <span>Post-Ictal Recovery State</span>
                             <span id="prob-val-postictal">0.0%</span>
                         </div>
                         <div class="confidence-bar-outer">
@@ -919,40 +1112,37 @@
                     </div>
                 </div>
 
-                <!-- Session Metrics -->
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <div class="metric-label">Model Sensitivity</div>
-                        <div class="metric-value" id="metric-sens">--</div>
+                <!-- Medical Notes Box and Edit/Sign Workflow -->
+                <div class="medical-notes-panel">
+                    <div class="medical-notes-header">
+                        <span class="panel-title">AI Summary & Diagnostics</span>
+                        <div class="notes-controls">
+                            <button class="notes-btn" id="btn-edit-notes">✎ EDIT</button>
+                            <button class="notes-btn sign-btn" id="btn-sign-notes" disabled>✓ SIGN REPORT</button>
+                        </div>
                     </div>
-                    <div class="metric-card">
-                        <div class="metric-label">Loss Proxy</div>
-                        <div class="metric-value" id="metric-loss">--</div>
+                    <div class="medical-notes-body" id="notes-content">
+                        <textarea class="notes-textarea" id="notes-edit-area"></textarea>
+                        <div id="notes-text-display">Awaiting inference output to generate report...</div>
+                        <div class="signature-strip" id="signature-strip"></div>
                     </div>
                 </div>
 
                 <!-- Diagnostic Terminal Console -->
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-                    <div class="demo-section-title">Diagnostic Terminal Log</div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <div class="panel-title" style="font-size: 9px; color: var(--text-muted);">Inference Logging Stream</div>
                     <div class="console-log" id="console-log">
-                        <div class="console-line system">[SYS] Terminal Initialized. Awaiting link.</div>
+                        <div class="console-line info">[SYS] Terminal Active. Awaiting clinician authentication.</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Waveform Oscilloscope Strip -->
+        <!-- 1D Waveform Oscilloscope Strip -->
         <div class="panel" id="bottom-panel">
             <div class="canvas-toolbar">
-                <div class="toolbar-group">
-                    <button class="canvas-btn active" id="btn-draw-normal">LINE TRACE</button>
-                    <button class="canvas-btn" id="btn-draw-glow">GLOW TRACE</button>
-                    <span class="canvas-label">Active Channel: <span id="lbl-active-ch">FP1-F7 (Replicated)</span></span>
-                </div>
-                <div class="toolbar-group">
-                    <span class="canvas-label">Resolution: <span>512 Samples (2.00s)</span></span>
-                    <span class="canvas-label">Frequency: <span>256 Hz</span></span>
-                </div>
+                <span class="canvas-label">Active channel: <span id="lbl-active-ch">FP1-F7 (1D EEG Preview)</span></span>
+                <span class="canvas-label">Frequency: <span>256 Hz (512 samples)</span></span>
             </div>
             <div class="canvas-wrapper">
                 <canvas id="signal-canvas"></canvas>
@@ -963,65 +1153,105 @@
 
     <!-- Scripts -->
     <script>
-        // Setup API URL
         let backendUrl = window.location.origin;
         if (backendUrl.includes('null') || backendUrl.startsWith('file://')) {
-            backendUrl = "http://localhost:5000"; // fallback for double-clicked file local loading
+            backendUrl = "http://localhost:5000"; // local development fallback
         }
         
-        const apiUrlInput = document.getElementById('api-url');
-        const connectBtn = document.getElementById('connect-btn');
-        const healthDot = document.getElementById('health-dot');
-        const healthText = document.getElementById('health-text');
+        let token = localStorage.getItem('ns_token');
+        let clinicianName = localStorage.getItem('ns_clinician');
+        let practiceId = localStorage.getItem('ns_practice');
         
-        apiUrlInput.value = backendUrl;
-
+        const loginOverlay = document.getElementById('login-overlay');
+        const loginPidInput = document.getElementById('login-pid');
+        const loginKeyInput = document.getElementById('login-key');
+        const loginSubmitBtn = document.getElementById('login-submit-btn');
+        const loginErrorMsg = document.getElementById('login-error-msg');
+        
+        const clinicianNameText = document.getElementById('clinician-name');
+        const logoutBtn = document.getElementById('logout-btn');
+        
         // Diagnostic Console Logger
         const consoleLog = document.getElementById('console-log');
         function writeLog(text, type = 'info') {
             const line = document.createElement('div');
             line.classList.add('console-line', type);
-            
             const timestamp = new Date().toLocaleTimeString();
             line.innerText = `[${timestamp}] ${text}`;
             consoleLog.appendChild(line);
             consoleLog.scrollTop = consoleLog.scrollHeight;
         }
 
-        // Connect/Verify API Health
-        async function checkApiHealth() {
-            const targetUrl = apiUrlInput.value.trim().replace(/\/$/, "");
-            writeLog(`Pinging backend API at ${targetUrl}/api/health...`, 'info');
-            
-            try {
-                const response = await fetch(`${targetUrl}/api/health`, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' }
-                });
-                
-                if (response.ok) {
-                    const status = await response.json();
-                    healthDot.className = "status-dot connected";
-                    healthText.innerText = "ONLINE";
-                    backendUrl = targetUrl;
-                    writeLog(`Connected successfully. Model loaded: ${status.model_loaded}, Model file exists: ${status.model_file_exists}`, 'success');
-                } else {
-                    throw new Error(`API health check returned status code ${response.status}`);
-                }
-            } catch (err) {
-                healthDot.className = "status-dot error";
-                healthText.innerText = "OFFLINE";
-                writeLog(`Connection failed: ${err.message}. Reverting to offline simulator.`, 'error');
+        // Check authentication state
+        function checkAuthState() {
+            if (token && clinicianName) {
+                loginOverlay.style.display = 'none';
+                clinicianNameText.innerText = `${clinicianName} (${practiceId})`;
+                writeLog(`Attending Session Restored: ${clinicianName} validated.`, 'success');
+            } else {
+                loginOverlay.style.display = 'flex';
+                clinicianNameText.innerText = "Awaiting Auth";
             }
         }
 
-        connectBtn.addEventListener('click', checkApiHealth);
+        // Authenticate Login API
+        loginSubmitBtn.addEventListener('click', async () => {
+            const pid = loginPidInput.value.trim();
+            const key = loginKeyInput.value.trim();
+            loginErrorMsg.style.display = 'none';
+            
+            writeLog(`Sending authentication credentials for: ${pid}...`, 'info');
+            try {
+                const res = await fetch(`${backendUrl}/api/auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ practice_id: pid, key: key })
+                });
+                
+                if (!res.ok) {
+                    throw new Error("Authentication credentials rejected");
+                }
+                
+                const data = await res.json();
+                token = data.token;
+                clinicianName = data.clinician;
+                practiceId = data.practice_id;
+                
+                localStorage.setItem('ns_token', token);
+                localStorage.setItem('ns_clinician', clinicianName);
+                localStorage.setItem('ns_practice', practiceId);
+                
+                loginOverlay.style.display = 'none';
+                clinicianNameText.innerText = `${clinicianName} (${practiceId})`;
+                writeLog(`Clinician session authorized successfully: ${clinicianName}`, 'success');
+            } catch (err) {
+                loginErrorMsg.style.display = 'block';
+                writeLog(`Authentication failed: ${err.message}`, 'error');
+            }
+        });
 
-        // 22-Channel Simulation Setup
+        // Logout
+        logoutBtn.addEventListener('click', async () => {
+            writeLog(`Logging out session...`, 'info');
+            try {
+                await fetch(`${backendUrl}/api/auth/logout`, {
+                    method: 'POST',
+                    headers: { 'X-Auth-Token': token }
+                });
+            } catch (err) {}
+            
+            token = null;
+            clinicianName = null;
+            practiceId = null;
+            localStorage.clear();
+            checkAuthState();
+        });
+
+        // Setup 22 channels list
         const chNames = [
-            "FP1-F7", "F7-T3", "T3-T5", "T5-O1", "FP1-F3", "F3-C3", "C3-P3", "P3-O1",
-            "FP2-F8", "F8-T4", "T4-T6", "T6-O2", "FP2-F4", "F4-C4", "C4-P4", "P4-O2",
-            "FZ-CZ", "CZ-PZ", "T3-C3", "C3-CZ", "CZ-C4", "C4-T4"
+            "FP1-F7","F7-T7","T7-P7","P7-O1","FP1-F3","F3-C3","C3-P3","P3-O1",
+            "FP2-F4","F4-C4","C4-P4","P4-O2","FP2-F8","F8-T8","T8-P8","P8-O2",
+            "FZ-CZ","CZ-PZ","P7-T7","T7-FT9","FT9-FT10","FT10-T8"
         ];
         
         const channelMonitor = document.getElementById('channel-monitor');
@@ -1034,11 +1264,11 @@
                 const row = document.createElement('div');
                 row.className = "channel-row";
                 row.innerHTML = `
-                    <span class="channel-name">Ch ${String(i+1).padStart(2, '0')}: ${name}</span>
+                    <span class="channel-name">${String(i+1).padStart(2, '0')}: ${name}</span>
                     <div class="channel-amplitude-bar-outer">
                         <div class="channel-amplitude-bar-inner" id="ch-bar-${i}"></div>
                     </div>
-                    <span class="channel-val" id="ch-val-${i}">0.00 µV</span>
+                    <span class="channel-val" id="ch-val-${i}">0.00 uV</span>
                 `;
                 channelMonitor.appendChild(row);
                 channelBars.push(document.getElementById(`ch-bar-${i}`));
@@ -1047,38 +1277,36 @@
         }
         buildChannelList();
 
-        // Animate 22-Channel list randomly when active
+        // Fluctuate Channels when idle
         let liveMonitoring = true;
-        let baseChannelAmplitudes = Array(22).fill(15); // baseline amplitude
+        let baseChannelAmps = Array(22).fill(15);
         
-        function updateChannelMetrics() {
+        function updateChannelsUI() {
             if (!liveMonitoring) return;
             for (let i = 0; i < 22; i++) {
-                // generate fluctuation
-                const change = (Math.random() - 0.5) * 6;
-                baseChannelAmplitudes[i] = Math.max(2, Math.min(100, baseChannelAmplitudes[i] + change));
+                const step = (Math.random() - 0.5) * 5;
+                baseChannelAmps[i] = Math.max(2, Math.min(100, baseChannelAmps[i] + step));
+                channelBars[i].style.width = `${baseChannelAmps[i]}%`;
+                channelAmps[i].innerText = `${baseChannelAmps[i].toFixed(2)} uV`;
                 
-                // update UI
-                channelBars[i].style.width = `${baseChannelAmplitudes[i]}%`;
-                channelAmps[i].innerText = `${baseChannelAmplitudes[i].toFixed(2)} µV`;
-                
-                // Color scaling based on amplitude severity
-                if (baseChannelAmplitudes[i] > 75) {
+                if (baseChannelAmplitudesColorTrigger(baseChannelAmps[i])) {
                     channelBars[i].style.backgroundColor = "var(--color-seizure)";
-                } else if (baseChannelAmplitudes[i] > 45) {
+                } else if (baseChannelAmps[i] > 40) {
                     channelBars[i].style.backgroundColor = "var(--color-preictal)";
                 } else {
                     channelBars[i].style.backgroundColor = "var(--color-normal)";
                 }
             }
         }
-        setInterval(updateChannelMetrics, 200);
+        function baseChannelAmplitudesColorTrigger(val) {
+            return val > 75;
+        }
+        setInterval(updateChannelsUI, 200);
 
         // Oscilloscope Canvas setup
         const canvas = document.getElementById('signal-canvas');
         const ctx = canvas.getContext('2d');
-        let currentSignal = Array(512).fill(0).map(() => (Math.random() - 0.5) * 5); // Default noise signal
-        let renderMode = 'normal'; // 'normal' or 'glow'
+        let currentSignal = Array(512).fill(0).map(() => (Math.random() - 0.5) * 4);
         
         function resizeCanvas() {
             const rect = canvas.parentElement.getBoundingClientRect();
@@ -1089,205 +1317,258 @@
         window.addEventListener('resize', resizeCanvas);
         setTimeout(resizeCanvas, 200);
 
-        document.getElementById('btn-draw-normal').addEventListener('click', (e) => {
-            renderMode = 'normal';
-            document.getElementById('btn-draw-normal').classList.add('active');
-            document.getElementById('btn-draw-glow').classList.remove('active');
-            drawWaveform();
-        });
-
-        document.getElementById('btn-draw-glow').addEventListener('click', (e) => {
-            renderMode = 'glow';
-            document.getElementById('btn-draw-glow').classList.add('active');
-            document.getElementById('btn-draw-normal').classList.remove('active');
-            drawWaveform();
-        });
-
-        // Draw waveform onto bottom canvas
         function drawWaveform() {
             if (canvas.width === 0 || canvas.height === 0) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Draw gridlines
-            ctx.strokeStyle = '#0a1417';
+            // Draw grid
+            ctx.strokeStyle = '#0a1215';
             ctx.lineWidth = 0.8;
-            
-            const gridWidth = 40;
-            for (let x = 0; x < canvas.width; x += gridWidth) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
             }
-            const gridHeight = 25;
-            for (let y = 0; y < canvas.height; y += gridHeight) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
+            for (let y = 0; y < canvas.height; y += 20) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
             }
             
-            // Draw center baseline
-            ctx.strokeStyle = '#102228';
+            ctx.strokeStyle = '#0f1b1f';
             ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(0, canvas.height / 2);
-            ctx.lineTo(canvas.width, canvas.height / 2);
-            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, canvas.height/2); ctx.lineTo(canvas.width, canvas.height/2); ctx.stroke();
             
-            if (!currentSignal || currentSignal.length === 0) return;
+            if (currentSignal.length === 0) return;
             
-            // Auto scale amplitude to fit height
             const maxAmp = Math.max(...currentSignal.map(Math.abs), 1.0);
             const scaleY = (canvas.height / 2) * 0.85 / maxAmp;
             
-            // Plot points
+            ctx.strokeStyle = 'var(--color-normal)';
+            ctx.lineWidth = 1.3;
             ctx.beginPath();
             const stepX = canvas.width / (currentSignal.length - 1);
-            
             for (let i = 0; i < currentSignal.length; i++) {
                 const x = i * stepX;
                 const y = canvas.height / 2 - currentSignal[i] * scaleY;
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
-            
-            if (renderMode === 'glow') {
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = 'var(--color-normal)';
-                ctx.strokeStyle = 'var(--color-normal)';
-                ctx.lineWidth = 2.0;
-            } else {
-                ctx.shadowBlur = 0;
-                ctx.strokeStyle = 'var(--color-normal)';
-                ctx.lineWidth = 1.2;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
             }
             ctx.stroke();
-            ctx.shadowBlur = 0; // reset
         }
 
-        // Overlay elements
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const scalogramPlaceholder = document.getElementById('scalogram-placeholder');
-        const scalogramWrapper = document.getElementById('scalogram-wrapper');
-        const scalogramImg = document.getElementById('scalogram-img');
-        const scanLine = document.getElementById('scan-line');
-
-        // Results Elements
+        // UI Panels references
+        const seizureAlertBanner = document.getElementById('seizure-alert-banner');
+        const bannerTitle = document.getElementById('banner-alert-title');
+        const bannerSub = document.getElementById('banner-alert-sub');
+        
+        const loader1 = document.getElementById('loading-overlay-1');
+        const loader2 = document.getElementById('loading-overlay-2');
+        
+        const placeholder1 = document.getElementById('scalo-placeholder-1');
+        const placeholder2 = document.getElementById('scalo-placeholder-2');
+        
+        const scaloImg1 = document.getElementById('scalo-img-1');
+        const scaloImg2 = document.getElementById('scalo-img-2');
+        
+        const scanLine1 = document.getElementById('scan-line-1');
+        const scanLine2 = document.getElementById('scan-line-2');
+        
         const classBadge = document.getElementById('class-badge');
-        const classConfidence = document.getElementById('class-confidence').querySelector('span');
         
         const probBars = {
             'Normal': document.getElementById('prob-bar-normal'),
             'Preictal': document.getElementById('prob-bar-preictal'),
-            'Seizure': document.getElementById('prob-bar-seizure'),
+            'Seizure (Ictal)': document.getElementById('prob-bar-seizure'),
             'Postictal': document.getElementById('prob-bar-postictal')
         };
         const probVals = {
             'Normal': document.getElementById('prob-val-normal'),
             'Preictal': document.getElementById('prob-val-preictal'),
-            'Seizure': document.getElementById('prob-val-seizure'),
+            'Seizure (Ictal)': document.getElementById('prob-val-seizure'),
             'Postictal': document.getElementById('prob-val-postictal')
         };
 
-        const metricSens = document.getElementById('metric-sens');
-        const metricLoss = document.getElementById('metric-loss');
+        // Notes and Edit/Sign Workflow variables
+        let rawReportText = "";
+        let signedReport = false;
         
-        const valWavelet = document.getElementById('val-wavelet');
-        const valFreq = document.getElementById('val-freq');
-        const valSfreq = document.getElementById('val-sfreq');
+        const btnEditNotes = document.getElementById('btn-edit-notes');
+        const btnSignNotes = document.getElementById('btn-sign-notes');
+        const notesDisplay = document.getElementById('notes-text-display');
+        const notesEditArea = document.getElementById('notes-edit-area');
+        const signatureStrip = document.getElementById('signature-strip');
+        
+        let editingNotes = false;
 
-        function updateResultsUI(data) {
-            // Update class badge
-            const label = data.predicted_label;
-            classBadge.innerText = label;
-            classBadge.className = `classification-badge ${label.toLowerCase()}`;
-            classConfidence.innerText = `${data.confidence}%`;
-            
-            // Update progress bars
-            for (const [key, val] of Object.entries(data.probabilities)) {
-                if (probBars[key]) {
-                    probBars[key].style.width = `${val}%`;
-                    probVals[key].innerText = `${val.toFixed(1)}%`;
-                }
+        btnEditNotes.addEventListener('click', () => {
+            if (signedReport) return;
+            if (!editingNotes) {
+                // switch to edit mode
+                editingNotes = true;
+                btnEditNotes.innerText = "💾 SAVE";
+                notesDisplay.style.display = 'none';
+                notesEditArea.value = rawReportText;
+                notesEditArea.style.display = 'block';
+                notesEditArea.focus();
+                btnSignNotes.disabled = true;
+            } else {
+                // save edits
+                editingNotes = false;
+                btnEditNotes.innerText = "✎ EDIT";
+                rawReportText = notesEditArea.value;
+                notesEditArea.style.display = 'none';
+                notesDisplay.innerText = rawReportText;
+                notesDisplay.style.display = 'block';
+                btnSignNotes.disabled = false;
+                writeLog("Attending Clinician edited medical report summary.", "info");
             }
+        });
 
-            // Update parameters footer
-            valWavelet.innerText = "cmor1.5-1.0";
-            valFreq.innerText = "1 - 50 Hz";
-            valSfreq.innerText = "256 Hz";
+        btnSignNotes.addEventListener('click', () => {
+            if (signedReport) return;
+            signedReport = true;
+            btnEditNotes.disabled = true;
+            btnSignNotes.disabled = true;
             
-            // Update cards
-            metricSens.innerText = `${data.session_metrics.sensitivity.toFixed(2)}%`;
-            metricLoss.innerText = data.session_metrics.loss.toFixed(4);
+            const utcTime = new Date().toUTCString();
+            signatureStrip.innerText = `✓ DIGITALLY SIGNED & VERIFIED BY: ${clinicianName} | ID: ${practiceId} | Date: ${utcTime}`;
+            signatureStrip.style.display = 'block';
+            writeLog("Attending Clinician signed and locked the medical report summary.", "success");
+        });
 
-            // Update dynamic channel monitor amplitudes based on state
-            let scaleFactor = 10;
-            if (label === 'Seizure') scaleFactor = 85;
-            else if (label === 'Preictal') scaleFactor = 50;
-            else if (label === 'Postictal') scaleFactor = 30;
-            else scaleFactor = 15;
-
-            for (let i = 0; i < 22; i++) {
-                baseChannelAmplitudes[i] = scaleFactor + (Math.random() * scaleFactor * 0.3);
-            }
-            liveMonitoring = false; // pause random baseline fluctuation
-            setTimeout(() => { liveMonitoring = true; }, 4000); // resume fluctuation after 4s
+        // Trigger /api/predict request
+        async function runInferenceAPI(payload, isJson = true) {
+            loader1.style.display = 'flex';
+            loader2.style.display = 'flex';
             
-            // Render Waveform Canvas
-            if (data.display_signal) {
-                currentSignal = data.display_signal;
-                drawWaveform();
-            }
-
-            // Render CWT Image
-            if (data.cwt_image_b64) {
-                scalogramPlaceholder.style.display = 'none';
-                scalogramWrapper.style.display = 'block';
-                scalogramImg.src = `data:image/png;base64,${data.cwt_image_b64}`;
-                scanLine.style.display = 'block';
-            }
+            // Reset edit sign workflow
+            signedReport = false;
+            editingNotes = false;
+            btnEditNotes.innerText = "✎ EDIT";
+            btnEditNotes.disabled = false;
+            btnSignNotes.disabled = false;
+            notesEditArea.style.display = 'none';
+            notesDisplay.style.display = 'block';
+            signatureStrip.style.display = 'none';
+            signatureStrip.innerText = "";
             
-            writeLog(`Inference completed. State: ${label} (Confidence: ${data.confidence}%)`, 'success');
-        }
-
-        // Trigger Inference via API
-        async function runPredict(payload, isJson = true) {
-            loadingOverlay.style.display = 'flex';
             const start = performance.now();
-            writeLog(`Triggering inference request to ${backendUrl}/api/predict...`, 'info');
-
+            const patientId = document.getElementById('patient-id-input').value.trim() || 'unknown';
+            writeLog(`Initiating Stage 3 model classification for Patient: ${patientId}...`, 'info');
+            
             try {
-                let options = {
-                    method: 'POST',
-                    headers: isJson ? { 'Content-Type': 'application/json' } : undefined,
-                    body: isJson ? JSON.stringify(payload) : payload
-                };
+                let bodyData;
+                let headers = { 'X-Auth-Token': token };
+                
+                if (isJson) {
+                    headers['Content-Type'] = 'application/json';
+                    payload.patient_id = patientId;
+                    bodyData = JSON.stringify(payload);
+                } else {
+                    payload.append('patient_id', patientId);
+                    bodyData = payload;
+                }
 
-                const res = await fetch(`${backendUrl}/api/predict`, options);
-                const duration = ((performance.now() - start) / 1000).toFixed(2);
+                const res = await fetch(`${backendUrl}/api/predict`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: bodyData
+                });
+
+                if (res.status === 401) {
+                    writeLog("Session expired. Attending credentials required.", "error");
+                    alert("Session expired. Please log in again.");
+                    token = null;
+                    localStorage.clear();
+                    checkAuthState();
+                    return;
+                }
 
                 if (!res.ok) {
-                    const errObj = await res.json().catch(() => ({}));
-                    throw new Error(errObj.error || `HTTP error status ${res.status}`);
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || `HTTP error ${res.status}`);
                 }
 
                 const data = await res.json();
-                writeLog(`Inference Response received in ${duration} seconds.`, 'success');
-                updateResultsUI(data);
-
+                const latency = ((performance.now() - start) / 1000).toFixed(2);
+                writeLog(`Pipeline inference completed in ${latency}s (Backend latency: ${data.elapsed_ms}ms)`, 'success');
+                
+                updateInterface(data);
             } catch (err) {
-                writeLog(`Inference failure: ${err.message}`, 'error');
+                writeLog(`Pipeline processing failure: ${err.message}`, 'error');
                 alert(`Error: ${err.message}`);
             } finally {
-                loadingOverlay.style.display = 'none';
+                loader1.style.display = 'none';
+                loader2.style.display = 'none';
             }
         }
 
-        // Upload EDF File Events
+        // Update view with API outputs
+        function updateInterface(data) {
+            const pred = data.prediction;
+            
+            // Classification Badge
+            classBadge.innerText = pred.toUpperCase();
+            classBadge.className = `classification-badge ${pred.toLowerCase().includes('seizure') ? 'seizure' : pred.toLowerCase()}`;
+            
+            // Seizure Warning Banner
+            if (pred.toLowerCase().includes('seizure')) {
+                seizureAlertBanner.className = "seizure-banner alarm";
+                bannerTitle.innerText = "🚨 SEIZURE DETECTED! 🚨";
+                const topConf = (data.confidences[pred] * 100).toFixed(1);
+                bannerSub.innerText = `Attending Clinician alert active. System detects seizure anomalies with ${topConf}% confidence.`;
+            } else {
+                seizureAlertBanner.className = "seizure-banner clean";
+                seizureAlertBanner.style.display = 'flex';
+                bannerTitle.innerText = "SYSTEM MONITORING STATUS: ACTIVE";
+                bannerSub.innerText = "No ictal seizure indicators detected in active biosignal epoch.";
+            }
+
+            // Update Progress bars
+            for (const [key, val] of Object.entries(data.confidences)) {
+                const percent = (val * 100);
+                if (probBars[key]) {
+                    probBars[key].style.width = `${percent}%`;
+                    probVals[key].innerText = `${percent.toFixed(1)}%`;
+                }
+            }
+
+            // Dual Scalograms
+            if (data.scalogram) {
+                placeholder1.style.display = 'none';
+                scaloImg1.src = `data:image/png;base64,${data.scalogram}`;
+                scaloImg1.style.display = 'block';
+                scanLine1.style.display = 'block';
+            }
+            if (data.scalogram_2) {
+                placeholder2.style.display = 'none';
+                scaloImg2.src = `data:image/png;base64,${data.scalogram_2}`;
+                scaloImg2.style.display = 'block';
+                scanLine2.style.display = 'block';
+            }
+
+            // Oscilloscope Preview
+            if (data.signal_preview) {
+                currentSignal = data.signal_preview;
+                drawWaveform();
+            }
+
+            // Medical Notes
+            rawReportText = data.medical_notes;
+            notesDisplay.innerText = rawReportText;
+            btnSignNotes.disabled = false;
+            
+            // Fluctuate Channel levels based on prediction amplitude
+            let scaleFactor = 15;
+            if (pred.toLowerCase().includes('seizure')) scaleFactor = 85;
+            else if (pred.toLowerCase().includes('preictal')) scaleFactor = 50;
+            else if (pred.toLowerCase().includes('postictal')) scaleFactor = 30;
+            
+            for (let i = 0; i < 22; i++) {
+                baseChannelAmps[i] = scaleFactor + (Math.random() * scaleFactor * 0.3);
+            }
+            liveMonitoring = false;
+            setTimeout(() => { liveMonitoring = true; }, 4000);
+        }
+
+        // Upload handlers
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
 
@@ -1305,64 +1586,58 @@
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-            
             if (e.dataTransfer.files.length > 0) {
-                const file = e.dataTransfer.files[0];
-                handleEdfUpload(file);
+                handleFileUpload(e.dataTransfer.files[0]);
             }
         });
 
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                handleEdfUpload(e.target.files[0]);
+                handleFileUpload(e.target.files[0]);
             }
         });
 
-        function handleEdfUpload(file) {
-            if (!file.name.toLowerCase().endsWith('.edf')) {
-                writeLog(`File upload rejected: ${file.name} is not an EDF file.`, 'error');
-                alert("Only .edf files are accepted.");
+        function handleFileUpload(file) {
+            const name = file.name.toLowerCase();
+            if (!name.endsWith('.edf') && !name.endsWith('.csv') && !name.endsWith('.txt')) {
+                writeLog(`Upload rejected: invalid file format (${file.name})`, 'error');
+                alert("Please upload standard .edf, .csv, or .txt format files.");
                 return;
             }
-            
-            writeLog(`Loading EDF File: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'info');
+            writeLog(`Ingesting file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`, 'info');
             
             const formData = new FormData();
-            formData.append('edf_file', file);
+            formData.append('file', file);
             
-            runPredict(formData, false);
+            runInferenceAPI(formData, false);
         }
 
-        // Demo Selector Buttons
+        // Demo Selector Buttons events
         document.querySelectorAll('.demo-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const type = e.target.getAttribute('data-type');
-                writeLog(`Requesting synthetic demo signal pattern for: ${type}`, 'info');
+                writeLog(`Ingesting synthetic ${type} wave patterns...`, 'info');
                 
                 try {
                     const response = await fetch(`${backendUrl}/api/demo-signal/${type}`);
                     if (!response.ok) {
-                        throw new Error(`Demo signal fetch failed with status ${response.status}`);
+                        throw new Error(`Failed to load demo signal`);
                     }
                     const data = await response.json();
                     
-                    // The backend returns a { signal: [float] } object.
-                    // We feed this directly back into /api/predict to execute full hybrid analysis.
-                    writeLog(`Synthetic data loaded (${data.signal.length} points). Uploading to model backend...`, 'info');
-                    runPredict({ signal: data.signal }, true);
-
+                    // Pipeline raw signal arrays directly back to predict
+                    runInferenceAPI({ signal_data: data.signal_data, type: type }, true);
                 } catch (err) {
-                    writeLog(`Demo pattern failed: ${err.message}`, 'error');
-                    alert(`Demo failed: ${err.message}`);
+                    writeLog(`Synthetic wave generator failed: ${err.message}`, 'error');
+                    alert(`Wave generation failed: ${err.message}`);
                 }
             });
         });
 
-        // Initialize check on load
+        // Init
         window.addEventListener('DOMContentLoaded', () => {
-            checkApiHealth();
+            checkAuthState();
         });
-
     </script>
 </body>
 </html>
