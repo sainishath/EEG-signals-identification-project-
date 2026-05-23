@@ -27,6 +27,7 @@ training_monitor.log
 
 # User generated files
 *.pdf
+*.mov
 .DS_Store
 
 # IDEs
