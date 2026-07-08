@@ -23,7 +23,9 @@ training_monitor.log
 !New folder/project info notes.txt
 !dataset/**/chb01-summary.txt
 
-# Do NOT ignore backend_model_completed.pt or backend_model_completed.pt! The API needs them to run online.
+# Model weights — large binary files; download from the link in README instead
+*.pt
+*.pth
 
 # User generated files
 *.pdf
